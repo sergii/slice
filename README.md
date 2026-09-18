@@ -86,6 +86,39 @@ Open `http://127.0.0.1:4173/broken.html`, resize below roughly 744px, and compar
 npm run demo:scan
 ```
 
+## Visual demo with Responsively
+
+Slice and Responsively can inspect the exact same local URL. Responsively provides the visual multi-device view; Slice provides deterministic evidence for the same page: failing widths, CSS selector, overflow pixels, and the exact breakpoint boundary.
+
+Install and launch Responsively App once. On macOS:
+
+```bash
+brew install --cask responsively
+```
+
+Then run:
+
+```bash
+npm run demo:visual
+```
+
+The command starts the demo site on `http://127.0.0.1:4173`, opens `broken.html` in Responsively through its `responsively://` protocol, and scans the same URL with Slice. The server remains running until you press Ctrl-C.
+
+The key comparison is:
+
+```text
+Responsively                   Slice
+visual overflow                horizontal-overflow
+narrow device previews    <=>  failing widths
+wide preview is clean     <=>  768 / 1024 PASS
+transition point           <=>  exact boundary
+visible element            <=>  CSS selector + overflowPx
+```
+
+Open `http://127.0.0.1:4173/fixed.html` in Responsively to compare the corrected version. Slice writes the broken-page evidence to `.slice/demo-responsively/results.json`.
+
+This intentionally exposes an important current product limitation too: a human may perceive one overflowing pricing grid while the current deepest-element detector can report several leaf elements that share the same breakpoint. That is useful evidence for the next root-cause grouping slice.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.
