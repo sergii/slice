@@ -222,9 +222,7 @@ function renderTable(
           );
         }
 
-        process.stdout.write(
-          `          likely fix: ${rootCause.diagnosis.suggestion}\n`,
-        );
+        process.stdout.write(`          likely fix: ${rootCause.diagnosis.suggestion}\n`);
       }
     }
   }
@@ -415,15 +413,7 @@ async function captureAtWidth(
   }
 
   const nodes = await captureLayout(runtime.cdp);
-  return enrichIssues(
-    runtime.page,
-    nodes,
-    width,
-    height,
-    metrics,
-    issueIds,
-    rootCauseIds,
-  );
+  return enrichIssues(runtime.page, nodes, width, height, metrics, issueIds, rootCauseIds);
 }
 
 function aggregateRootCauses(
