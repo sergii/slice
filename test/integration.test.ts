@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const fixturesDir = path.join(here, 'fixtures');
-const cliPath = path.resolve(here, '../dist/cli.js');
+const cliPath = path.resolve(here, '../dist/cli.mjs');
 
 let server: Server;
 let baseUrl: string;

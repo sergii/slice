@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const fixturesDir = path.join(root, 'test', 'fixtures');
-const cliPath = path.join(root, 'dist', 'cli.js');
+const cliPath = path.join(root, 'dist', 'cli.mjs');
 
 function startServer() {
   return new Promise((resolve, reject) => {
