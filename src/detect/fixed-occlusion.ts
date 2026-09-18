@@ -77,18 +77,12 @@ function hasPointerEvents(node: LayoutNode, nodesByIndex: Map<number, LayoutNode
   return !blocked(node) && !ancestorsOf(node, nodesByIndex).some(blocked);
 }
 
-function hasScrollableAncestor(
-  node: LayoutNode,
-  nodesByIndex: Map<number, LayoutNode>,
-): boolean {
+function hasScrollableAncestor(node: LayoutNode, nodesByIndex: Map<number, LayoutNode>): boolean {
   return ancestorsOf(node, nodesByIndex).some((ancestor) => {
     const overflow = ancestor.styles.overflow?.toLowerCase();
     const overflowY = ancestor.styles['overflow-y']?.toLowerCase();
     return (
-      overflow === 'auto' ||
-      overflow === 'scroll' ||
-      overflowY === 'auto' ||
-      overflowY === 'scroll'
+      overflow === 'auto' || overflow === 'scroll' || overflowY === 'auto' || overflowY === 'scroll'
     );
   });
 }
@@ -190,7 +184,7 @@ export function detectFixedContentOcclusions(
         continue;
       }
 
-      if (occluder.paintOrder <= target.paintOrder) continue;
+      if (occluder.paintOrder <= target.paintOrder ) continue;
 
       const left = Math.max(occluder.rect.x, target.rect.x, 0);
       const top = Math.max(occluder.rect.y, target.rect.y, 0);
@@ -207,7 +201,10 @@ export function detectFixedContentOcclusions(
       const overlapWidth = right - left;
       const overlapHeight = bottom - top;
 
-      if (overlapWidth <= OCCLUSION_TOLERANCE_PX || overlapHeight <= OCCLUSION_TOLERANCE_PX) {
+      if (
+        overlapWidth <= OCCLUSION_TOLERANCE_PX ||
+        overlapHeight <= OCCLUSION_TOLERANCE_PX
+      ) {
         continue;
       }
 

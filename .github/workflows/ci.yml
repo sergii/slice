@@ -32,15 +32,6 @@ jobs:
       - name: Install npm dependencies
         run: npm ci --ignore-scripts
 
-      - name: Emit scrollable-occlusion formatting
-        shell: bash
-        run: |
-          npx oxfmt --write src/detect/fixed-occlusion.ts
-          echo "SLICE_FMT_SCROLL_OCCLUSION"
-          base64 -w0 src/detect/fixed-occlusion.ts
-          echo
-          echo "SLICE_FMT_END"
-
       # Fast deterministic gates first. Browser setup does not start unless these pass.
       - name: Format check
         run: npm run fmt:check
