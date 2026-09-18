@@ -55,6 +55,28 @@ export function startDemoServer(port = 0) {
   });
 }
 
+export async function startPreferredDemoServer(port = 4173) {
+  try {
+    const started = await startDemoServer(port);
+    return {
+      ...started,
+      requestedPort: port,
+      usedFallbackPort: false,
+    };
+  } catch (error) {
+    if (!(error && typeof error === 'object' && error.code === 'EADDRINUSE')) {
+      throw error;
+    }
+
+    const started = await startDemoServer(0);
+    return {
+      ...started,
+      requestedPort: port,
+      usedFallbackPort: true,
+    };
+  }
+}
+
 export function closeDemoServer(server) {
   return new Promise((resolve, reject) => {
     server.close((error) => (error ? reject(error) : resolve()));

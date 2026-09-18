@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { closeDemoServer, startDemoServer } from './demo-server.mjs';
+import { closeDemoServer, startPreferredDemoServer } from './demo-server.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(root, 'dist', 'cli.mjs');
@@ -76,11 +76,17 @@ async function runSlice(url) {
 
 await rm(outDir, { recursive: true, force: true });
 
-const { server, baseUrl } = await startDemoServer(4173);
+const { server, baseUrl, requestedPort, usedFallbackPort } = await startPreferredDemoServer(4173);
 const brokenUrl = baseUrl + '/broken.html';
 const fixedUrl = baseUrl + '/fixed.html';
 
 try {
+  if (usedFallbackPort) {
+    process.stdout.write(
+      `\nPort ${requestedPort} is already in use. Using ${new URL(baseUrl).port} instead.\n`,
+    );
+  }
+
   process.stdout.write(
     '\n========================================\n' +
       ' Slice + Responsively visual demo\n' +

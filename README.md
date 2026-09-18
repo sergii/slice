@@ -102,7 +102,7 @@ Then run:
 npm run demo:visual
 ```
 
-The command starts the demo site on `http://127.0.0.1:4173`, opens `broken.html` in Responsively through its `responsively://` protocol, and scans the same URL with Slice. The server remains running until you press Ctrl-C.
+The command prefers `http://127.0.0.1:4173`. If that port is already occupied, it automatically selects a free local port, prints the chosen URL, opens `broken.html` in Responsively through its `responsively://` protocol, and scans that exact same URL with Slice. The server remains running until you press Ctrl-C.
 
 The key comparison is:
 
