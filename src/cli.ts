@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, CommanderError } from 'commander';
 import pc from 'picocolors';
 import {
   getDocumentMetrics,
@@ -25,12 +25,50 @@ import type {
 const DEFAULT_WIDTHS = [320, 375, 390, 430, 768, 1024, 1280, 1440];
 const DEFAULT_HEIGHT = 900;
 const DEFAULT_WAIT_MS = 300;
+const DEFAULT_TIMEOUT_MS = 30_000;
 const DEFAULT_OUT_DIR = '.slice';
+
+interface CliOptions {
+  widths: string;
+  height: string;
+  out: string;
+  json: boolean;
+  boundary: boolean;
+  timeout: string;
+  wait: string;
+}
 
 interface BoundaryDisplay {
   result: BoundaryResult;
   rangeStart: number;
   rangeEnd: number;
+}
+
+class SliceCliError extends Error {}
+
+function parsePositiveInteger(value: string, name: string, allowZero = false): number {
+  const parsed = Number(value);
+  const valid = Number.isInteger(parsed) && (allowZero ? parsed >= 0 : parsed > 0);
+
+  if (!valid) {
+    throw new SliceCliError(`${name} must be ${allowZero ? 'a non-negative' : 'a positive'} integer`);
+  }
+
+  return parsed;
+}
+
+function parseWidths(value: string): number[] {
+  const widths = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => parsePositiveInteger(part, '--widths'));
+
+  if (widths.length === 0) {
+    throw new SliceCliError('--widths must contain at least one width');
+  }
+
+  return [...new Set(widths)];
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -177,46 +215,46 @@ async function captureIssuesAtWidth(
   );
 }
 
-const program = new Command();
+async function runSlice(url: string, options: CliOptions): Promise<number> {
+  const widths = parseWidths(options.widths);
+  const height = parsePositiveInteger(options.height, '--height');
+  const timeout = parsePositiveInteger(options.timeout, '--timeout');
+  const waitMs = parsePositiveInteger(options.wait, '--wait', true);
+  const startedAt = Date.now();
 
-program
-  .name('slice')
-  .description('Deterministic responsive QA for coding agents')
-  .argument('<url>', 'page URL to inspect')
-  .action(async (url: string) => {
-    const startedAt = Date.now();
-    const runtime = await launchBrowser({
-      width: DEFAULT_WIDTHS[0] ?? 320,
-      height: DEFAULT_HEIGHT,
-    });
+  const runtime = await launchBrowser({
+    width: widths[0] ?? 320,
+    height,
+  });
 
-    const viewports: ViewportResult[] = [];
-    const issueIds = new Map<string, string>();
+  const viewports: ViewportResult[] = [];
+  const issueIds = new Map<string, string>();
 
-    try {
-      await installStabilization(runtime.context);
-      await runtime.page.goto(url, { timeout: 30_000 });
+  try {
+    await installStabilization(runtime.context);
+    await runtime.page.goto(url, { timeout });
 
-      for (const width of DEFAULT_WIDTHS) {
-        const issues = await captureIssuesAtWidth(
-          width,
-          DEFAULT_HEIGHT,
-          DEFAULT_WAIT_MS,
-          runtime,
-          issueIds,
-        );
+    for (const width of widths) {
+      const issues = await captureIssuesAtWidth(
+        width,
+        height,
+        waitMs,
+        runtime,
+        issueIds,
+      );
 
-        viewports.push({
-          width,
-          height: DEFAULT_HEIGHT,
-          status: issues.length > 0 ? 'fail' : 'pass',
-          issues,
-        });
-      }
+      viewports.push({
+        width,
+        height,
+        status: issues.length > 0 ? 'fail' : 'pass',
+        issues,
+      });
+    }
 
-      const boundaries: BoundaryResult[] = [];
-      const boundaryDisplays: BoundaryDisplay[] = [];
+    const boundaries: BoundaryResult[] = [];
+    const boundaryDisplays: BoundaryDisplay[] = [];
 
+    if (options.boundary) {
       for (let index = 0; index < viewports.length - 1; index += 1) {
         const current = viewports[index];
         const next = viewports[index + 1];
@@ -227,7 +265,7 @@ program
 
         const search = await findBoundary(
           async (width) => {
-            await stabilizeViewport(runtime.page, width, DEFAULT_HEIGHT, DEFAULT_WAIT_MS);
+            await stabilizeViewport(runtime.page, width, height, waitMs);
             const metrics = await getDocumentMetrics(runtime.page);
             return metrics.scrollWidth > metrics.clientWidth;
           },
@@ -237,8 +275,8 @@ program
 
         const issuesAtBoundary = await captureIssuesAtWidth(
           search.firstBadWidth,
-          DEFAULT_HEIGHT,
-          DEFAULT_WAIT_MS,
+          height,
+          waitMs,
           runtime,
           issueIds,
         );
@@ -266,30 +304,67 @@ program
           });
         }
       }
-
-      const durationMs = Date.now() - startedAt;
-      const failed = viewports.filter((viewport) => viewport.status === 'fail').length;
-      const results: SliceResults = {
-        version: 1,
-        url,
-        timestamp: new Date().toISOString(),
-        userAgent: `Chromium/${runtime.browser.version()}`,
-        summary: {
-          viewportsChecked: viewports.length,
-          passed: viewports.length - failed,
-          failed,
-          totalIssues: viewports.reduce((sum, viewport) => sum + viewport.issues.length, 0),
-          durationMs,
-        },
-        viewports,
-        boundaries,
-      };
-
-      const outputPath = await writeResults(DEFAULT_OUT_DIR, results);
-      renderTable(url, viewports, boundaryDisplays, outputPath, durationMs);
-    } finally {
-      await runtime.browser.close();
     }
+
+    const durationMs = Date.now() - startedAt;
+    const failed = viewports.filter((viewport) => viewport.status === 'fail').length;
+    const results: SliceResults = {
+      version: 1,
+      url,
+      timestamp: new Date().toISOString(),
+      userAgent: `Chromium/${runtime.browser.version()}`,
+      summary: {
+        viewportsChecked: viewports.length,
+        passed: viewports.length - failed,
+        failed,
+        totalIssues: viewports.reduce((sum, viewport) => sum + viewport.issues.length, 0),
+        durationMs,
+      },
+      viewports,
+      boundaries,
+    };
+
+    const outputPath = await writeResults(options.out, results);
+
+    if (options.json) {
+      process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
+    } else {
+      renderTable(url, viewports, boundaryDisplays, outputPath, durationMs);
+    }
+
+    return failed > 0 ? 1 : 0;
+  } finally {
+    await runtime.browser.close();
+  }
+}
+
+const program = new Command();
+
+program
+  .name('slice')
+  .description('Deterministic responsive QA for coding agents')
+  .argument('<url>', 'page URL to inspect')
+  .option('--widths <list>', 'viewport widths separated by commas', DEFAULT_WIDTHS.join(','))
+  .option('--height <n>', 'viewport height', String(DEFAULT_HEIGHT))
+  .option('--out <dir>', 'artifact output directory', DEFAULT_OUT_DIR)
+  .option('--json', 'print JSON to stdout instead of the table', false)
+  .option('--no-boundary', 'skip binary boundary search')
+  .option('--timeout <ms>', 'page load timeout', String(DEFAULT_TIMEOUT_MS))
+  .option('--wait <ms>', 'delay after resize', String(DEFAULT_WAIT_MS))
+  .exitOverride()
+  .action(async (url: string, options: CliOptions) => {
+    process.exitCode = await runSlice(url, options);
   });
 
-await program.parseAsync();
+try {
+  await program.parseAsync();
+} catch (error) {
+  const message = error instanceof CommanderError
+    ? error.message
+    : error instanceof Error
+      ? error.message
+      : String(error);
+
+  process.stderr.write(`Slice: ${message}\n`);
+  process.exitCode = 2;
+}
