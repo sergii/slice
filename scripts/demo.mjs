@@ -12,16 +12,7 @@ function runCli(url, out) {
   return new Promise((resolve) => {
     const child = spawn(
       process.execPath,
-      [
-        cliPath,
-        url,
-        '--widths',
-        '320,390,430,768,1024',
-        '--wait',
-        '0',
-        '--out',
-        out,
-      ],
+      [cliPath, url, '--widths', '320,390,430,768,1024', '--wait', '0', '--out', out],
       {
         cwd: root,
         env: process.env,

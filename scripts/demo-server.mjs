@@ -70,9 +70,15 @@ if (isDirectRun) {
 
   process.stdout.write(
     '\nSlice demo site\n\n' +
-      '  Landing  ' + baseUrl + '/\n' +
-      '  Broken   ' + baseUrl + '/broken.html\n' +
-      '  Fixed    ' + baseUrl + '/fixed.html\n\n' +
+      '  Landing  ' +
+      baseUrl +
+      '/\n' +
+      '  Broken   ' +
+      baseUrl +
+      '/broken.html\n' +
+      '  Fixed    ' +
+      baseUrl +
+      '/fixed.html\n\n' +
       'Open the Broken page and resize the browser below ~744px to see the horizontal overflow.\n' +
       'In another terminal run:\n\n' +
       '  npm run demo:scan\n\n' +
