@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 import { Command, CommanderError } from 'commander';
+import type { Page } from 'playwright';
 import pc from 'picocolors';
 import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './browser.js';
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
+import { findUniqueCssSource } from './css-source.js';
 import { detectHorizontalOverflow } from './detect/overflow.js';
+import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import { groupHorizontalOverflow } from './grouping.js';
 import { writeResults } from './report.js';
 import { buildStableSelector, makePageUniquenessCheck } from './selector.js';
@@ -15,6 +18,7 @@ import type {
   LayoutNode,
   RootCause,
   RootCauseBoundary,
+  RootCauseDiagnosis,
   RootCauseObservation,
   SliceResults,
   ViewportResult,
@@ -47,6 +51,7 @@ interface CapturedRootCause extends RootCauseObservation {
   selector: string;
   tagName: string;
   side: 'right' | 'left';
+  diagnosis?: RootCauseDiagnosis;
 }
 
 interface CaptureResult {
@@ -85,7 +90,7 @@ function parseWidths(value: string): number[] {
 
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength - 1)}â¦`;
+  return `${value.slice(0, Math.max(0, maxLength - 3))}...`;
 }
 
 function renderIssue(issue: Issue): string {
@@ -102,7 +107,7 @@ function renderTable(
 ): void {
   const colors = pc.createColors(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR);
 
-  process.stdout.write(`\n  Slice Â· ${url}\n\n`);
+  process.stdout.write(`\n  Slice | ${url}\n\n`);
 
   for (const viewport of viewports) {
     const width = String(viewport.width).padEnd(6, ' ');
@@ -152,13 +157,20 @@ function renderTable(
     for (const { rootCause, observation } of rootsAtWidth) {
       const text =
         `${truncate(rootCause.selector, 60)} overflows ${rootCause.side} by ` +
-        `${observation.overflowPx}px Â· ${observation.issueIds.length} affected elements`;
+        `${observation.overflowPx}px | ${observation.issueIds.length} affected elements`;
 
       if (firstLine) {
         process.stdout.write(`  ${width}${colors.red('FAIL')}  ${text}\n`);
         firstLine = false;
       } else {
         process.stdout.write(`        ${text}\n`);
+      }
+
+      if (rootCause.diagnosis) {
+        process.stdout.write(
+          `        reason: ${rootCause.diagnosis.property}: ${rootCause.diagnosis.value} | ` +
+            `${observation.computedWidthPx}px wide vs ${observation.availableWidthPx}px available\n`,
+        );
       }
 
       const evidence = viewport.issues.filter((issue) => issue.rootCauseId === rootCause.id);
@@ -186,17 +198,34 @@ function renderTable(
     for (const rootCause of rootCauses) {
       const boundaryText =
         rootCause.boundaries.length === 1
-          ? ` Â· breaks at ${rootCause.boundaries[0]?.boundary}px`
+          ? ` | breaks at ${rootCause.boundaries[0]?.boundary}px`
           : rootCause.boundaries.length > 1
-            ? ` Â· boundaries ${rootCause.boundaries
+            ? ` | boundaries ${rootCause.boundaries
                 .map((boundary) => `${boundary.boundary}px`)
                 .join(', ')}`
             : '';
 
       process.stdout.write(
-        `    ${rootCause.id}  ${rootCause.selector}${boundaryText} Â· ` +
+        `    ${rootCause.id}  ${rootCause.selector}${boundaryText} | ` +
           `${rootCause.issueIds.length} evidence selectors\n`,
       );
+
+      if (rootCause.diagnosis) {
+        process.stdout.write(
+          `          reason: ${rootCause.diagnosis.property}: ${rootCause.diagnosis.value}\n`,
+        );
+
+        if (rootCause.diagnosis.source) {
+          const sourceName = rootCause.diagnosis.source.stylesheet ?? '<inline stylesheet>';
+          process.stdout.write(
+            `          source: ${rootCause.diagnosis.source.selector} @ ${sourceName}\n`,
+          );
+        }
+
+        process.stdout.write(
+          `          likely fix: ${rootCause.diagnosis.suggestion}\n`,
+        );
+      }
     }
   }
 
@@ -221,7 +250,7 @@ function renderTable(
 
   const failures = viewports.filter((viewport) => viewport.status === 'fail').length;
   process.stdout.write(
-    `\n  ${failures} failures in ${viewports.length} viewports Â· ` +
+    `\n  ${failures} failures in ${viewports.length} viewports | ` +
       `${(durationMs / 1000).toFixed(1)}s\n`,
   );
   process.stdout.write(`  ${outputPath}\n\n`);
@@ -236,7 +265,7 @@ function rootCauseKey(selector: string, side: 'right' | 'left'): string {
 }
 
 async function enrichIssues(
-  pageEvaluate: (selector: string) => Promise<number>,
+  page: Page,
   nodes: LayoutNode[],
   viewportWidth: number,
   viewportHeight: number,
@@ -254,7 +283,9 @@ async function enrichIssues(
     detected,
   );
   const byIndex = new Map(nodes.map((node) => [node.index, node]));
-  const isUnique = makePageUniquenessCheck(pageEvaluate);
+  const isUnique = makePageUniquenessCheck((selector) =>
+    page.evaluate((value) => document.querySelectorAll(value).length, selector),
+  );
   const rootCauseByLeaf = new Map<number, { id: string; captured: CapturedRootCause }>();
 
   for (const group of grouped) {
@@ -270,6 +301,23 @@ async function enrichIssues(
       rootCauseIds.set(key, id);
     }
 
+    const measurement = diagnoseHorizontalOverflowRoot(root, viewportWidth);
+    let diagnosis: RootCauseDiagnosis | undefined;
+
+    if (measurement.diagnosis) {
+      const source = await findUniqueCssSource(
+        page,
+        selector,
+        measurement.diagnosis.property,
+        measurement.diagnosis.value,
+      );
+
+      diagnosis = {
+        ...measurement.diagnosis,
+        source,
+      };
+    }
+
     const captured: CapturedRootCause = {
       id,
       selector,
@@ -279,6 +327,9 @@ async function enrichIssues(
       overflowPx: group.overflowPx,
       bbox: group.bbox,
       issueIds: [],
+      computedWidthPx: measurement.computedWidthPx,
+      availableWidthPx: measurement.availableWidthPx,
+      ...(diagnosis ? { diagnosis } : {}),
     };
 
     for (const leafNodeIndex of group.leafNodeIndices) {
@@ -365,8 +416,7 @@ async function captureAtWidth(
 
   const nodes = await captureLayout(runtime.cdp);
   return enrichIssues(
-    (selector) =>
-      runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
+    runtime.page,
     nodes,
     width,
     height,
@@ -389,6 +439,7 @@ function aggregateRootCauses(
       side: 'right' | 'left';
       issueIds: Set<string>;
       observations: RootCauseObservation[];
+      diagnosis?: RootCauseDiagnosis;
     }
   >();
 
@@ -403,16 +454,22 @@ function aggregateRootCauses(
         side: observation.side,
         issueIds: new Set(),
         observations: [],
+        ...(observation.diagnosis ? { diagnosis: observation.diagnosis } : {}),
       };
       byId.set(observation.id, aggregate);
     }
 
     observation.issueIds.forEach((issueId) => aggregate.issueIds.add(issueId));
+    if (!aggregate.diagnosis && observation.diagnosis) {
+      aggregate.diagnosis = observation.diagnosis;
+    }
     aggregate.observations.push({
       viewportWidth: observation.viewportWidth,
       overflowPx: observation.overflowPx,
       bbox: observation.bbox,
       issueIds: observation.issueIds,
+      computedWidthPx: observation.computedWidthPx,
+      availableWidthPx: observation.availableWidthPx,
     });
   }
 
@@ -444,6 +501,7 @@ function aggregateRootCauses(
       issueIds: [...aggregate.issueIds],
       observations: aggregate.observations,
       boundaries: [...boundaryByKey.values()],
+      ...(aggregate.diagnosis ? { diagnosis: aggregate.diagnosis } : {}),
     };
   });
 }

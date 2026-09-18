@@ -39,11 +39,28 @@ export const boundaryResultSchema = z.object({
   probesUsed: z.number().int().nonnegative(),
 });
 
+const cssSourceReferenceSchema = z.object({
+  stylesheet: z.string().nullable(),
+  selector: z.string().min(1),
+  property: z.string().min(1),
+  value: z.string().min(1),
+});
+
+const rootCauseDiagnosisSchema = z.object({
+  kind: z.literal('min-width-constraint'),
+  property: z.literal('min-width'),
+  value: z.string().min(1),
+  suggestion: z.string().min(1),
+  source: cssSourceReferenceSchema.nullable(),
+});
+
 const rootCauseObservationSchema = z.object({
   viewportWidth: z.number().int().positive(),
   overflowPx: z.number().int().positive(),
   bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   issueIds: z.array(z.string().min(1)).min(2),
+  computedWidthPx: z.number().int().nonnegative(),
+  availableWidthPx: z.number().int().nonnegative(),
 });
 
 const rootCauseBoundarySchema = z.object({
@@ -63,6 +80,7 @@ const rootCauseSchema = z.object({
   issueIds: z.array(z.string().min(1)).min(2),
   observations: z.array(rootCauseObservationSchema).min(1),
   boundaries: z.array(rootCauseBoundarySchema),
+  diagnosis: rootCauseDiagnosisSchema.optional(),
 });
 
 export const resultsSchema = z.object({

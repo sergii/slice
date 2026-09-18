@@ -54,6 +54,13 @@ try {
   if (!rootCause || broken.rootCauses.length !== 1) {
     throw new Error('Broken demo page should resolve to one pricing-grid root cause');
   }
+  if (
+    rootCause.diagnosis?.kind !== 'min-width-constraint' ||
+    rootCause.diagnosis.value !== '720px' ||
+    rootCause.diagnosis.source?.selector !== '.broken .plan-grid'
+  ) {
+    throw new Error('Broken demo page should identify the min-width CSS source');
+  }
 
   process.stdout.write('\n2) The same page after the responsive CSS fix\n');
 

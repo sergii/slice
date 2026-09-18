@@ -63,11 +63,28 @@ export interface BoundaryResult {
   probesUsed: number;
 }
 
+export interface CssSourceReference {
+  stylesheet: string | null;
+  selector: string;
+  property: string;
+  value: string;
+}
+
+export interface RootCauseDiagnosis {
+  kind: 'min-width-constraint';
+  property: 'min-width';
+  value: string;
+  suggestion: string;
+  source: CssSourceReference | null;
+}
+
 export interface RootCauseObservation {
   viewportWidth: number;
   overflowPx: number;
   bbox: [number, number, number, number];
   issueIds: string[];
+  computedWidthPx: number;
+  availableWidthPx: number;
 }
 
 export interface RootCauseBoundary {
@@ -87,6 +104,7 @@ export interface RootCause {
   issueIds: string[];
   observations: RootCauseObservation[];
   boundaries: RootCauseBoundary[];
+  diagnosis?: RootCauseDiagnosis;
 }
 
 export interface SliceResults {

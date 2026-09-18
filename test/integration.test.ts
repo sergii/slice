@@ -156,6 +156,21 @@ describe('slice CLI', () => {
     expect(report.rootCauses[0].selector).toBe('section.grid');
     expect(report.rootCauses[0].issueIds.length).toBeGreaterThanOrEqual(2);
     expect(report.summary.rootCauseGroups).toBe(1);
+    expect(report.rootCauses[0].diagnosis).toMatchObject({
+      kind: 'min-width-constraint',
+      property: 'min-width',
+      value: '700px',
+      source: {
+        stylesheet: null,
+        selector: 'section.grid',
+        property: 'min-width',
+        value: '700px',
+      },
+    });
+    expect(report.rootCauses[0].observations[0]).toMatchObject({
+      computedWidthPx: 700,
+      availableWidthPx: 390,
+    });
     expect(
       report.viewports[0].issues.every(
         (issue: { rootCauseId?: string }) => issue.rootCauseId === report.rootCauses[0].id,
@@ -163,6 +178,9 @@ describe('slice CLI', () => {
     ).toBe(true);
     expect(result.stdout).toContain('section.grid');
     expect(result.stdout).toContain('affected elements');
+    expect(result.stdout).toContain('reason: min-width: 700px');
+    expect(result.stdout).toContain('source: section.grid @ <inline stylesheet>');
+    expect(result.stdout).not.toContain('Â');
   });
 
   it('is deterministic apart from timestamp and durationMs', async () => {

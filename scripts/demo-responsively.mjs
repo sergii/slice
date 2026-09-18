@@ -112,6 +112,28 @@ try {
     throw new Error('Expected exactly one grouped pricing-grid root cause');
   }
 
+  const diagnosis = rootCause.diagnosis;
+  if (
+    !diagnosis ||
+    diagnosis.kind !== 'min-width-constraint' ||
+    diagnosis.value !== '720px' ||
+    diagnosis.source?.selector !== '.broken .plan-grid' ||
+    !diagnosis.source.stylesheet?.endsWith('/styles.css')
+  ) {
+    throw new Error('Expected min-width: 720px diagnosis sourced from .broken .plan-grid');
+  }
+
+  const observation390 = rootCause.observations.find(
+    (observation) => observation.viewportWidth === 390,
+  );
+  if (
+    !observation390 ||
+    observation390.computedWidthPx !== 720 ||
+    observation390.availableWidthPx !== 372
+  ) {
+    throw new Error('Expected 720px grid width vs 372px available at 390px');
+  }
+
   const rootBoundary = rootCause.boundaries[0]?.boundary;
   if (rootBoundary !== 743) {
     throw new Error(`Expected pricing-grid boundary 743px, got ${rootBoundary ?? 'none'}`);
@@ -137,6 +159,19 @@ try {
       '  Root cause:   ' +
       rootCause.selector +
       '\n' +
+      '  Reason:       ' +
+      diagnosis.property +
+      ': ' +
+      diagnosis.value +
+      '\n' +
+      '  At 390px:     ' +
+      observation390.computedWidthPx +
+      'px wide vs ' +
+      observation390.availableWidthPx +
+      'px available\n' +
+      '  Source:       ' +
+      diagnosis.source.selector +
+      ' @ styles.css\n' +
       '  Evidence:     ' +
       rootCause.issueIds.length +
       ' leaf selectors\n' +

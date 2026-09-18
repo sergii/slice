@@ -134,6 +134,23 @@ Root causes
 
 The JSON report preserves every leaf issue in `viewports[].issues`, links grouped leaves with `rootCauseId`, and exposes the aggregate in top-level `rootCauses[]`.
 
+### Deterministic CSS diagnosis
+
+For grouped layout roots, Slice can explain a conservative CSS cause without AI. The first rule is a pixel `min-width` constraint that is wider than the available viewport space. When exactly one accessible matching stylesheet declaration sets that computed value, Slice also records its stylesheet and selector.
+
+```text
+390   FAIL  section.plan-grid overflows right by 348px | 8 affected elements
+      reason: min-width: 720px | 720px wide vs 372px available
+
+Root causes
+  root-1  section.plan-grid | breaks at 743px | 8 evidence selectors
+          reason: min-width: 720px
+          source: .broken .plan-grid @ http://127.0.0.1:4173/styles.css
+          likely fix: remove or constrain min-width, or let the layout reflow
+```
+
+Source attribution is intentionally conservative: ambiguous or inaccessible stylesheet matches produce no source claim rather than a guess.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.

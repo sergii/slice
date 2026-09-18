@@ -10,6 +10,11 @@ const COMPUTED_STYLES = [
   'z-index',
   'transform',
   'clip-path',
+  'min-width',
+  'width',
+  'max-width',
+  'grid-template-columns',
+  'flex-wrap',
 ] as const;
 
 interface NodeTreeSnapshot {
