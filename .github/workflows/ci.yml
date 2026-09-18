@@ -63,3 +63,6 @@ jobs:
 
       - name: Demo project
         run: npm run demo
+
+      - name: Responsively visual demo harness
+        run: node scripts/demo-responsively.mjs --no-open --once
