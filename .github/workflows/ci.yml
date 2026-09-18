@@ -32,6 +32,15 @@ jobs:
       - name: Install npm dependencies
         run: npm ci --ignore-scripts
 
+      - name: Emit boundary demo formatting
+        shell: bash
+        run: |
+          npx oxfmt --write scripts/demo-responsively.mjs
+          echo "SLICE_FMT_BOUNDARY"
+          base64 -w0 scripts/demo-responsively.mjs
+          echo
+          echo "SLICE_FMT_END"
+
       # Fast deterministic gates first. Browser setup does not start unless these pass.
       - name: Format check
         run: npm run fmt:check
