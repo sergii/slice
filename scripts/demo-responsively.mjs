@@ -198,13 +198,7 @@ try {
       '  Near boundary:' +
       '\n' +
       boundaryViewports
-        .map(
-          (viewport) =>
-            '    ' +
-            viewport.width +
-            'px  ' +
-            viewport.status.toUpperCase(),
-        )
+        .map((viewport) => '    ' + viewport.width + 'px  ' + viewport.status.toUpperCase())
         .join('\n') +
       '\n' +
       '  Slice report: .slice/demo-responsively/results.json\n\n' +

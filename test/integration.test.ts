@@ -172,10 +172,9 @@ describe('slice CLI', () => {
     const out = await makeOutDir();
     const result = await runCli('grouped-grid.html', [
       '--widths',
-      '390',
+      '390,720',
       '--wait',
       '0',
-      '--no-boundary',
       '--out',
       out,
     ]);
@@ -202,6 +201,13 @@ describe('slice CLI', () => {
       computedWidthPx: 700,
       availableWidthPx: 390,
     });
+    expect(report.rootCauses[0].boundaries).toEqual([
+      expect.objectContaining({
+        boundary: 698,
+        lastGoodWidth: 699,
+        firstBadWidth: 698,
+      }),
+    ]);
     expect(
       report.viewports[0].issues.every(
         (issue: { rootCauseId?: string }) => issue.rootCauseId === report.rootCauses[0].id,

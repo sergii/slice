@@ -561,6 +561,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
           issueIds,
           rootCauseIds,
         );
+        rootCauseObservations.push(...capturedAtBoundary.rootCauses);
 
         const fallbackIssues = current.status === 'fail' ? current.issues : next.issues;
         const issueIdsAtBoundary = [
