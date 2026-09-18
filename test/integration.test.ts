@@ -276,6 +276,45 @@ describe('slice CLI', () => {
     expect(first).toEqual(second);
   });
 
+  it('requires a visible ready selector before scanning', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('clean.html', [
+      '--widths',
+      '390',
+      '--wait',
+      '0',
+      '--no-boundary',
+      '--ready-selector',
+      'main',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(0);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    expect(report.summary.viewportsChecked).toBe(1);
+  });
+
+  it('returns exit 2 and no report when the ready selector never appears', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('clean.html', [
+      '--widths',
+      '390',
+      '--wait',
+      '0',
+      '--timeout',
+      '250',
+      '--ready-selector',
+      '[data-missing-ready-state]',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(2);
+    expect(result.stderr).toContain('Slice:');
+    await expect(readFile(path.join(out, 'results.json'), 'utf8')).rejects.toThrow('ENOENT');
+  });
+
   it('does not write a partial report when navigation fails', async () => {
     const out = await makeOutDir();
     const result = await new Promise<{ code: number | null; stderr: string }>((resolve) => {

@@ -40,6 +40,7 @@ interface CliOptions {
   boundary: boolean;
   timeout: string;
   wait: string;
+  readySelector?: string;
 }
 
 interface BoundaryDisplay {
@@ -594,6 +595,13 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     await installStabilization(runtime.context);
     await runtime.page.goto(url, { timeout });
 
+    if (options.readySelector) {
+      await runtime.page.waitForSelector(options.readySelector, {
+        state: 'visible',
+        timeout,
+      });
+    }
+
     for (const width of widths) {
       const captured = await captureAtWidth(width, height, waitMs, runtime, issueIds, rootCauseIds);
       rootCauseObservations.push(...captured.rootCauses);
@@ -725,6 +733,7 @@ program
   .option('--no-boundary', 'skip binary boundary search')
   .option('--timeout <ms>', 'page load timeout', String(DEFAULT_TIMEOUT_MS))
   .option('--wait <ms>', 'delay after resize', String(DEFAULT_WAIT_MS))
+  .option('--ready-selector <selector>', 'require a visible selector before scanning')
   .exitOverride()
   .action(async (url: string, options: CliOptions) => {
     process.exitCode = await runSlice(url, options);

@@ -160,6 +160,16 @@ Root causes
 
 Source attribution is intentionally conservative: ambiguous or inaccessible stylesheet matches produce no source claim rather than a guess.
 
+### Application readiness
+
+For SPAs or authenticated/local harnesses, require a visible element that proves the intended application state mounted before Slice scans it:
+
+```sh
+slice http://127.0.0.1:4173 --ready-selector 'main[data-app-ready]'
+```
+
+If the selector does not become visible within `--timeout`, Slice exits with code `2` and does not write a partial report. This prevents a login, error, or loading shell from being mistaken for a clean application scan.
+
 ### Fixed-element collision detector
 
 Slice also reports deterministic collisions between independent visible `position: fixed` elements. It ignores full-viewport backdrops, ancestor/descendant fixed pairs, `aria-hidden` subtrees, and overlaps of 1px or less.
