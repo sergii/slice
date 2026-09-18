@@ -19,23 +19,6 @@ interface NodeTreeSnapshot {
   attributes?: number[][];
 }
 
-interface LayoutTreeSnapshot {
-  nodeIndex: number[];
-  styles: number[][];
-  bounds: Array<[number, number, number, number]>;
-  paintOrders?: number[];
-}
-
-interface DocumentSnapshot {
-  nodes: NodeTreeSnapshot;
-  layout: LayoutTreeSnapshot;
-}
-
-interface CaptureSnapshotResult {
-  documents: DocumentSnapshot[];
-  strings: string[];
-}
-
 function decodeAttributes(
   encoded: number[] | undefined,
   strings: string[],
@@ -75,7 +58,7 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
     computedStyles: [...COMPUTED_STYLES],
     includeDOMRects: true,
     includePaintOrder: true,
-  }) as CaptureSnapshotResult;
+  });
 
   const document = snapshot.documents[0];
   if (!document) return [];
