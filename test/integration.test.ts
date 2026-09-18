@@ -192,6 +192,6 @@ describe('slice CLI', () => {
 
     expect(result.code).toBe(2);
     expect(result.stderr).toContain('Slice:');
-    await expect(readFile(path.join(out, 'results.json'), 'utf8')).rejects.toThrow();
+    await expect(readFile(path.join(out, 'results.json'), 'utf8')).rejects.toThrow('ENOENT');
   });
 });

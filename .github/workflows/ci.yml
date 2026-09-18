@@ -6,9 +6,8 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Temporarily write-enabled only to commit the one-time Oxfmt migration.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: slice-ci-${{ github.workflow }}-${{ github.ref }}
@@ -32,23 +31,6 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci --ignore-scripts
-
-      - name: Apply Oxfmt migration
-        run: npm run fmt
-
-      - name: Commit Oxfmt migration
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            exit 0
-          fi
-
-          git config user.name "Serhii Ponomarov"
-          git config user.email "sergii.ponomarov@gmail.com"
-          git add src test scripts package.json tsconfig.json tsdown.config.ts
-          git commit -m "style: apply oxfmt"
-          git push
 
       # Fast deterministic gates first. Browser setup does not start unless these pass.
       - name: Format check
