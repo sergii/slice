@@ -85,7 +85,7 @@ function parseWidths(value: string): number[] {
 
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
-  return `${value.slice(0, maxLength - 1)}…`;
+  return `${value.slice(0, maxLength - 1)}â¦`;
 }
 
 function renderIssue(issue: Issue): string {
@@ -102,7 +102,7 @@ function renderTable(
 ): void {
   const colors = pc.createColors(Boolean(process.stdout.isTTY) && !process.env.NO_COLOR);
 
-  process.stdout.write(`\n  Slice · ${url}\n\n`);
+  process.stdout.write(`\n  Slice Â· ${url}\n\n`);
 
   for (const viewport of viewports) {
     const width = String(viewport.width).padEnd(6, ' ');
@@ -152,7 +152,7 @@ function renderTable(
     for (const { rootCause, observation } of rootsAtWidth) {
       const text =
         `${truncate(rootCause.selector, 60)} overflows ${rootCause.side} by ` +
-        `${observation.overflowPx}px · ${observation.issueIds.length} affected elements`;
+        `${observation.overflowPx}px Â· ${observation.issueIds.length} affected elements`;
 
       if (firstLine) {
         process.stdout.write(`  ${width}${colors.red('FAIL')}  ${text}\n`);
@@ -186,15 +186,15 @@ function renderTable(
     for (const rootCause of rootCauses) {
       const boundaryText =
         rootCause.boundaries.length === 1
-          ? ` · breaks at ${rootCause.boundaries[0]?.boundary}px`
+          ? ` Â· breaks at ${rootCause.boundaries[0]?.boundary}px`
           : rootCause.boundaries.length > 1
-            ? ` · boundaries ${rootCause.boundaries
+            ? ` Â· boundaries ${rootCause.boundaries
                 .map((boundary) => `${boundary.boundary}px`)
                 .join(', ')}`
             : '';
 
       process.stdout.write(
-        `    ${rootCause.id}  ${rootCause.selector}${boundaryText} · ` +
+        `    ${rootCause.id}  ${rootCause.selector}${boundaryText} Â· ` +
           `${rootCause.issueIds.length} evidence selectors\n`,
       );
     }
@@ -221,7 +221,7 @@ function renderTable(
 
   const failures = viewports.filter((viewport) => viewport.status === 'fail').length;
   process.stdout.write(
-    `\n  ${failures} failures in ${viewports.length} viewports · ` +
+    `\n  ${failures} failures in ${viewports.length} viewports Â· ` +
       `${(durationMs / 1000).toFixed(1)}s\n`,
   );
   process.stdout.write(`  ${outputPath}\n\n`);
@@ -365,7 +365,8 @@ async function captureAtWidth(
 
   const nodes = await captureLayout(runtime.cdp);
   return enrichIssues(
-    (selector) => runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
+    (selector) =>
+      runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
     nodes,
     width,
     height,
@@ -469,14 +470,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     await runtime.page.goto(url, { timeout });
 
     for (const width of widths) {
-      const captured = await captureAtWidth(
-        width,
-        height,
-        waitMs,
-        runtime,
-        issueIds,
-        rootCauseIds,
-      );
+      const captured = await captureAtWidth(width, height, waitMs, runtime, issueIds, rootCauseIds);
       rootCauseObservations.push(...captured.rootCauses);
 
       viewports.push({

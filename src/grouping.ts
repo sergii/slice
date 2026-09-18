@@ -1,7 +1,4 @@
-import {
-  detectHorizontalOverflowCandidates,
-  type DetectedOverflow,
-} from './detect/overflow.js';
+import { detectHorizontalOverflowCandidates, type DetectedOverflow } from './detect/overflow.js';
 import type { LayoutNode, Viewport } from './types.js';
 
 const LAYOUT_DISPLAYS = new Set(['flex', 'grid', 'inline-flex', 'inline-grid']);

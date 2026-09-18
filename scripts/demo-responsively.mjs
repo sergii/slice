@@ -106,9 +106,7 @@ try {
   }
 
   const report = JSON.parse(await readFile(path.join(outDir, 'results.json'), 'utf8'));
-  const rootCause = report.rootCauses.find((candidate) =>
-    candidate.selector.includes('plan-grid'),
-  );
+  const rootCause = report.rootCauses.find((candidate) => candidate.selector.includes('plan-grid'));
 
   if (!rootCause || report.rootCauses.length !== 1) {
     throw new Error('Expected exactly one grouped pricing-grid root cause');
