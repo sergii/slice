@@ -8,14 +8,16 @@ const CSS_MODULE_HASH = /_[a-z0-9]{5,}$/i;
 function escapeCssIdentifier(value: string): string {
   if (value.length === 0) return '';
 
-  return Array.from(value).map((char, index) => {
-    const code = char.codePointAt(0) ?? 0;
-    const safe = /[a-zA-Z0-9_-]/.test(char);
-    const leadingDigit = index === 0 && /[0-9]/.test(char);
+  return Array.from(value)
+    .map((char, index) => {
+      const code = char.codePointAt(0) ?? 0;
+      const safe = /[a-zA-Z0-9_-]/.test(char);
+      const leadingDigit = index === 0 && /[0-9]/.test(char);
 
-    if (safe && !leadingDigit) return char;
-    return `\\${code.toString(16)} `;
-  }).join('');
+      if (safe && !leadingDigit) return char;
+      return `\\${code.toString(16)} `;
+    })
+    .join('');
 }
 
 function stableId(node: LayoutNode): string | null {
@@ -39,9 +41,7 @@ function segment(node: LayoutNode, withNthChild = false): string {
   const tag = node.tagName.toLowerCase();
   const classes = stableClasses(node);
   const classPart = classes.map((name) => `.${escapeCssIdentifier(name)}`).join('');
-  const nth = withNthChild && node.nthChild
-    ? `:nth-child(${node.nthChild})`
-    : '';
+  const nth = withNthChild && node.nthChild ? `:nth-child(${node.nthChild})` : '';
 
   return `${tag}${classPart}${nth}`;
 }
@@ -79,7 +79,10 @@ export async function buildStableSelector(
   const chain = ancestorChain(node, nodesByIndex, 3);
 
   for (let start = chain.length - 1; start >= 0; start -= 1) {
-    const selector = chain.slice(start).map((entry) => segment(entry)).join(' > ');
+    const selector = chain
+      .slice(start)
+      .map((entry) => segment(entry))
+      .join(' > ');
     if (await isUnique(selector)) return selector;
   }
 
@@ -100,7 +103,7 @@ export function makePageUniquenessCheck(
 ): SelectorUniquenessCheck {
   return async (selector: string) => {
     try {
-      return await evaluate(selector) === 1;
+      return (await evaluate(selector)) === 1;
     } catch {
       return false;
     }

@@ -14,10 +14,7 @@ function nodeMap(nodes: LayoutNode[]): Map<number, LayoutNode> {
   return new Map(nodes.map((node) => [node.index, node]));
 }
 
-function ancestorsOf(
-  node: LayoutNode,
-  nodesByIndex: Map<number, LayoutNode>,
-): LayoutNode[] {
+function ancestorsOf(node: LayoutNode, nodesByIndex: Map<number, LayoutNode>): LayoutNode[] {
   const ancestors: LayoutNode[] = [];
   let currentIndex = node.parentIndex;
   const seen = new Set<number>();
@@ -38,8 +35,7 @@ function isAncestorOf(
   descendant: LayoutNode,
   nodesByIndex: Map<number, LayoutNode>,
 ): boolean {
-  return ancestorsOf(descendant, nodesByIndex)
-    .some((node) => node.index === ancestor.index);
+  return ancestorsOf(descendant, nodesByIndex).some((node) => node.index === ancestor.index);
 }
 
 function clipsHorizontalOverflow(node: LayoutNode): boolean {
@@ -69,35 +65,35 @@ function hasTranslatedTransform(node: LayoutNode): boolean {
 
   if (transform.startsWith('matrix3d(')) {
     const values = parseTransformNumbers(transform);
-    return values.length === 16
-      && (Math.abs(values[12] ?? 0) > 0.01
-        || Math.abs(values[13] ?? 0) > 0.01
-        || Math.abs(values[14] ?? 0) > 0.01);
+    return (
+      values.length === 16 &&
+      (Math.abs(values[12] ?? 0) > 0.01 ||
+        Math.abs(values[13] ?? 0) > 0.01 ||
+        Math.abs(values[14] ?? 0) > 0.01)
+    );
   }
 
   if (transform.startsWith('matrix(')) {
     const values = parseTransformNumbers(transform);
-    return values.length === 6
-      && (Math.abs(values[4] ?? 0) > 0.01
-        || Math.abs(values[5] ?? 0) > 0.01);
+    return (
+      values.length === 6 && (Math.abs(values[4] ?? 0) > 0.01 || Math.abs(values[5] ?? 0) > 0.01)
+    );
   }
 
   return false;
 }
 
-function isLegitimateOverflow(
-  node: LayoutNode,
-  nodesByIndex: Map<number, LayoutNode>,
-): boolean {
+function isLegitimateOverflow(node: LayoutNode, nodesByIndex: Map<number, LayoutNode>): boolean {
   if (node.tagName === 'HTML' || node.tagName === 'BODY') return true;
   if (node.styles.position?.toLowerCase() === 'fixed') return true;
   if (hasTranslatedTransform(node)) return true;
   if (node.attributes['aria-hidden']?.toLowerCase() === 'true') return true;
 
-  return ancestorsOf(node, nodesByIndex).some((ancestor) => (
-    clipsHorizontalOverflow(ancestor)
-    || ancestor.attributes['aria-hidden']?.toLowerCase() === 'true'
-  ));
+  return ancestorsOf(node, nodesByIndex).some(
+    (ancestor) =>
+      clipsHorizontalOverflow(ancestor) ||
+      ancestor.attributes['aria-hidden']?.toLowerCase() === 'true',
+  );
 }
 
 function overflowFor(
@@ -128,7 +124,9 @@ export function detectHorizontalOverflow(
   const candidates = nodes
     .map((node) => ({ node, overflow: overflowFor(node, viewport) }))
     .filter(
-      (entry): entry is {
+      (
+        entry,
+      ): entry is {
         node: LayoutNode;
         overflow: { side: 'right' | 'left'; overflowPx: number };
       } => entry.overflow !== null,
@@ -136,10 +134,13 @@ export function detectHorizontalOverflow(
     .filter(({ node }) => !isLegitimateOverflow(node, nodesByIndex));
 
   return candidates
-    .filter(({ node }) => !candidates.some(
-      ({ node: other }) => other.index !== node.index
-        && isAncestorOf(node, other, nodesByIndex),
-    ))
+    .filter(
+      ({ node }) =>
+        !candidates.some(
+          ({ node: other }) =>
+            other.index !== node.index && isAncestorOf(node, other, nodesByIndex),
+        ),
+    )
     .map(({ node, overflow }) => ({
       nodeIndex: node.index,
       overflowPx: overflow.overflowPx,

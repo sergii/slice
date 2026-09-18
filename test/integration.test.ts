@@ -50,11 +50,7 @@ async function runCli(
   args: string[],
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, [
-      cliPath,
-      `${baseUrl}/${fixture}`,
-      ...args,
-    ], {
+    const child = spawn(process.execPath, [cliPath, `${baseUrl}/${fixture}`, ...args], {
       env: { ...process.env, NO_COLOR: '1' },
     });
 
@@ -62,8 +58,12 @@ async function runCli(
     let stderr = '';
     child.stdout.setEncoding('utf8');
     child.stderr.setEncoding('utf8');
-    child.stdout.on('data', (chunk) => { stdout += chunk; });
-    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
     child.on('close', (code) => resolve({ code, stdout, stderr }));
   });
 }
@@ -76,7 +76,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await new Promise<void>((resolve, reject) => {
-    server.close((error) => error ? reject(error) : resolve());
+    server.close((error) => (error ? reject(error) : resolve()));
   });
 
   await Promise.all(tempDirs.map((dir) => rm(dir, { recursive: true, force: true })));
@@ -87,24 +87,32 @@ describe('slice CLI', () => {
   it('returns exit 0 and empty issues for a clean page', async () => {
     const out = await makeOutDir();
     const result = await runCli('clean.html', [
-      '--widths', '320,390',
-      '--wait', '0',
+      '--widths',
+      '320,390',
+      '--wait',
+      '0',
       '--no-boundary',
-      '--out', out,
+      '--out',
+      out,
     ]);
 
     expect(result.code).toBe(0);
     const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
-    expect(report.viewports.every((viewport: { issues: unknown[] }) => viewport.issues.length === 0)).toBe(true);
+    expect(
+      report.viewports.every((viewport: { issues: unknown[] }) => viewport.issues.length === 0),
+    ).toBe(true);
   });
 
   it('attributes nested overflow to exactly one deepest element', async () => {
     const out = await makeOutDir();
     const result = await runCli('nested.html', [
-      '--widths', '390',
-      '--wait', '0',
+      '--widths',
+      '390',
+      '--wait',
+      '0',
       '--no-boundary',
-      '--out', out,
+      '--out',
+      out,
     ]);
 
     expect(result.code).toBe(1);
@@ -116,9 +124,12 @@ describe('slice CLI', () => {
   it('finds the exact 712px boundary', async () => {
     const out = await makeOutDir();
     const result = await runCli('boundary.html', [
-      '--widths', '700,720',
-      '--wait', '0',
-      '--out', out,
+      '--widths',
+      '700,720',
+      '--wait',
+      '0',
+      '--out',
+      out,
     ]);
 
     expect(result.code).toBe(1);
@@ -131,16 +142,22 @@ describe('slice CLI', () => {
     const secondOut = await makeOutDir();
 
     await runCli('fixed-width.html', [
-      '--widths', '390',
-      '--wait', '0',
+      '--widths',
+      '390',
+      '--wait',
+      '0',
       '--no-boundary',
-      '--out', firstOut,
+      '--out',
+      firstOut,
     ]);
     await runCli('fixed-width.html', [
-      '--widths', '390',
-      '--wait', '0',
+      '--widths',
+      '390',
+      '--wait',
+      '0',
       '--no-boundary',
-      '--out', secondOut,
+      '--out',
+      secondOut,
     ]);
 
     const first = JSON.parse(await readFile(path.join(firstOut, 'results.json'), 'utf8'));
@@ -159,13 +176,17 @@ describe('slice CLI', () => {
       const child = spawn(process.execPath, [
         cliPath,
         'http://127.0.0.1:1',
-        '--timeout', '250',
-        '--out', out,
+        '--timeout',
+        '250',
+        '--out',
+        out,
       ]);
 
       let stderr = '';
       child.stderr.setEncoding('utf8');
-      child.stderr.on('data', (chunk) => { stderr += chunk; });
+      child.stderr.on('data', (chunk) => {
+        stderr += chunk;
+      });
       child.on('close', (code) => resolve({ code, stderr }));
     });
 

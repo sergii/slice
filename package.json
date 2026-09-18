@@ -2,16 +2,13 @@
   "name": "slice",
   "version": "0.1.0",
   "description": "Deterministic responsive QA for coding agents",
-  "type": "module",
   "bin": {
     "slice": "./dist/cli.js"
-  },
-  "engines": {
-    "node": ">=22.18.0"
   },
   "files": [
     "dist"
   ],
+  "type": "module",
   "scripts": {
     "build": "tsdown",
     "fmt": "oxfmt --write \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\" tsdown.config.ts package.json tsconfig.json",
@@ -41,5 +38,8 @@
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=22.18.0"
   }
 }

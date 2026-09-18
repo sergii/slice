@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildStableSelector } from '../src/selector.js';
 import type { LayoutNode } from '../src/types.js';
 
-function node(
-  index: number,
-  parentIndex: number,
-  overrides: Partial<LayoutNode> = {},
-): LayoutNode {
+function node(index: number, parentIndex: number, overrides: Partial<LayoutNode> = {}): LayoutNode {
   return {
     index,
     parentIndex,
@@ -24,7 +20,11 @@ function node(
 describe('buildStableSelector', () => {
   it('prefers a stable unique id', async () => {
     const target = node(1, -1, { attributes: { id: 'main-nav' } });
-    const selector = await buildStableSelector(target, [target], async (value) => value === '#main-nav');
+    const selector = await buildStableSelector(
+      target,
+      [target],
+      async (value) => value === '#main-nav',
+    );
 
     expect(selector).toBe('#main-nav');
   });

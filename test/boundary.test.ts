@@ -3,11 +3,7 @@ import { findBoundary } from '../src/boundary.js';
 
 describe('findBoundary', () => {
   it('finds an increasing-width failure boundary exactly', async () => {
-    const result = await findBoundary(
-      async (width) => width >= 712,
-      430,
-      768,
-    );
+    const result = await findBoundary(async (width) => width >= 712, 430, 768);
 
     expect(result).toEqual({
       boundary: 712,
@@ -19,11 +15,7 @@ describe('findBoundary', () => {
   });
 
   it('works when the failure is on the narrower side', async () => {
-    const result = await findBoundary(
-      async (width) => width <= 711,
-      768,
-      430,
-    );
+    const result = await findBoundary(async (width) => width <= 711, 768, 430);
 
     expect(result.boundary).toBe(711);
     expect(result.lastGoodWidth).toBe(712);

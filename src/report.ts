@@ -3,10 +3,7 @@ import path from 'node:path';
 import { resultsSchema } from './schema.js';
 import type { SliceResults } from './types.js';
 
-export async function writeResults(
-  outDir: string,
-  results: SliceResults,
-): Promise<string> {
+export async function writeResults(outDir: string, results: SliceResults): Promise<string> {
   const validated = resultsSchema.parse(results);
   await mkdir(outDir, { recursive: true });
 

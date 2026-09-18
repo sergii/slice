@@ -1,4 +1,10 @@
-import { chromium, type Browser, type BrowserContext, type CDPSession, type Page } from 'playwright';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type CDPSession,
+  type Page,
+} from 'playwright';
 
 export interface BrowserRuntime {
   browser: Browser;
@@ -12,9 +18,10 @@ export interface DocumentMetrics {
   clientWidth: number;
 }
 
-export async function launchBrowser(
-  viewport: { width: number; height: number },
-): Promise<BrowserRuntime> {
+export async function launchBrowser(viewport: {
+  width: number;
+  height: number;
+}): Promise<BrowserRuntime> {
   const browser = await chromium.launch({
     args: ['--force-device-scale-factor=1', '--disable-lcd-text'],
   });

@@ -64,11 +64,7 @@ async function runScenario(baseUrl, scenario) {
 
   try {
     process.stdout.write(`\n=== ${scenario.name} ===\n`);
-    const code = await runCli(`${baseUrl}/${scenario.fixture}`, [
-      ...scenario.args,
-      '--out',
-      out,
-    ]);
+    const code = await runCli(`${baseUrl}/${scenario.fixture}`, [...scenario.args, '--out', out]);
 
     if (code !== scenario.expectedExit) {
       throw new Error(

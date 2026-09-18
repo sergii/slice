@@ -88,9 +88,7 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
 
     const visibility = styles.visibility.toLowerCase();
     const display = styles.display.toLowerCase();
-    const isVisible = display !== 'none'
-      && visibility !== 'hidden'
-      && visibility !== 'collapse';
+    const isVisible = display !== 'none' && visibility !== 'hidden' && visibility !== 'collapse';
 
     if (!isVisible) continue;
 

@@ -2,11 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { detectHorizontalOverflow } from '../src/detect/overflow.js';
 import type { LayoutNode } from '../src/types.js';
 
-function node(
-  index: number,
-  parentIndex: number,
-  overrides: Partial<LayoutNode> = {},
-): LayoutNode {
+function node(index: number, parentIndex: number, overrides: Partial<LayoutNode> = {}): LayoutNode {
   return {
     index,
     parentIndex,
@@ -35,8 +31,9 @@ describe('detectHorizontalOverflow', () => {
       node(3, 2, { rect: { x: 0, y: 0, width: 500, height: 40 } }),
     ];
 
-    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 }))
-      .toEqual([expect.objectContaining({ nodeIndex: 3, overflowPx: 110 })]);
+    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 })).toEqual([
+      expect.objectContaining({ nodeIndex: 3, overflowPx: 110 }),
+    ]);
   });
 
   it('ignores overflow clipped by an ancestor', () => {
@@ -54,8 +51,7 @@ describe('detectHorizontalOverflow', () => {
       node(2, 1, { rect: { x: 0, y: 0, width: 500, height: 40 } }),
     ];
 
-    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 }))
-      .toEqual([]);
+    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 })).toEqual([]);
   });
 
   it('ignores fixed and translated elements', () => {
@@ -84,8 +80,7 @@ describe('detectHorizontalOverflow', () => {
       }),
     ];
 
-    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 }))
-      .toEqual([]);
+    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 })).toEqual([]);
   });
 
   it('ignores aria-hidden subtrees', () => {
@@ -94,7 +89,6 @@ describe('detectHorizontalOverflow', () => {
       node(2, 1, { rect: { x: 0, y: 0, width: 500, height: 40 } }),
     ];
 
-    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 }))
-      .toEqual([]);
+    expect(detectHorizontalOverflow(nodes, { width: 390, height: 900 })).toEqual([]);
   });
 });

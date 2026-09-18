@@ -12,29 +12,32 @@ const STABILIZE_CSS = `
 `;
 
 export async function installStabilization(context: BrowserContext): Promise<void> {
-  await context.addInitScript(({ css }) => {
-    const install = () => {
-      if (document.getElementById('__slice_stabilize')) return;
+  await context.addInitScript(
+    ({ css }) => {
+      const install = () => {
+        if (document.getElementById('__slice_stabilize')) return;
 
-      const style = document.createElement('style');
-      style.id = '__slice_stabilize';
-      style.textContent = css;
-      (document.head ?? document.documentElement).appendChild(style);
-    };
+        const style = document.createElement('style');
+        style.id = '__slice_stabilize';
+        style.textContent = css;
+        (document.head ?? document.documentElement).appendChild(style);
+      };
 
-    if (document.documentElement) {
-      install();
-      return;
-    }
+      if (document.documentElement) {
+        install();
+        return;
+      }
 
-    const observer = new MutationObserver(() => {
-      if (!document.documentElement) return;
-      install();
-      observer.disconnect();
-    });
+      const observer = new MutationObserver(() => {
+        if (!document.documentElement) return;
+        install();
+        observer.disconnect();
+      });
 
-    observer.observe(document, { childList: true, subtree: true });
-  }, { css: STABILIZE_CSS });
+      observer.observe(document, { childList: true, subtree: true });
+    },
+    { css: STABILIZE_CSS },
+  );
 }
 
 export async function stabilizeViewport(

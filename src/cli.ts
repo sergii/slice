@@ -1,27 +1,14 @@
 #!/usr/bin/env node
 import { Command, CommanderError } from 'commander';
 import pc from 'picocolors';
-import {
-  getDocumentMetrics,
-  launchBrowser,
-  type DocumentMetrics,
-} from './browser.js';
+import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './browser.js';
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { detectHorizontalOverflow } from './detect/overflow.js';
 import { writeResults } from './report.js';
-import {
-  buildStableSelector,
-  makePageUniquenessCheck,
-} from './selector.js';
+import { buildStableSelector, makePageUniquenessCheck } from './selector.js';
 import { installStabilization, stabilizeViewport } from './stabilize.js';
-import type {
-  BoundaryResult,
-  Issue,
-  LayoutNode,
-  SliceResults,
-  ViewportResult,
-} from './types.js';
+import type { BoundaryResult, Issue, LayoutNode, SliceResults, ViewportResult } from './types.js';
 
 const DEFAULT_WIDTHS = [320, 375, 390, 430, 768, 1024, 1280, 1440];
 const DEFAULT_HEIGHT = 900;
@@ -52,7 +39,9 @@ function parsePositiveInteger(value: string, name: string, allowZero = false): n
   const valid = Number.isInteger(parsed) && (allowZero ? parsed >= 0 : parsed > 0);
 
   if (!valid) {
-    throw new SliceCliError(`${name} must be ${allowZero ? 'a non-negative' : 'a positive'} integer`);
+    throw new SliceCliError(
+      `${name} must be ${allowZero ? 'a non-negative' : 'a positive'} integer`,
+    );
   }
 
   return parsed;
@@ -204,10 +193,8 @@ async function captureIssuesAtWidth(
 
   const nodes = await captureLayout(runtime.cdp);
   return enrichIssues(
-    (selector) => runtime.page.evaluate(
-      (value) => document.querySelectorAll(value).length,
-      selector,
-    ),
+    (selector) =>
+      runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
     nodes,
     width,
     height,
@@ -236,13 +223,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     await runtime.page.goto(url, { timeout });
 
     for (const width of widths) {
-      const issues = await captureIssuesAtWidth(
-        width,
-        height,
-        waitMs,
-        runtime,
-        issueIds,
-      );
+      const issues = await captureIssuesAtWidth(width, height, waitMs, runtime, issueIds);
 
       viewports.push({
         width,
@@ -284,8 +265,11 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
 
         const fallbackIssues = current.status === 'fail' ? current.issues : next.issues;
         const issueIdsAtBoundary = [
-          ...new Set((issuesAtBoundary.length > 0 ? issuesAtBoundary : fallbackIssues)
-            .map((issue) => issue.id)),
+          ...new Set(
+            (issuesAtBoundary.length > 0 ? issuesAtBoundary : fallbackIssues).map(
+              (issue) => issue.id,
+            ),
+          ),
         ];
 
         for (const issueId of issueIdsAtBoundary) {
