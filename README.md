@@ -119,6 +119,21 @@ Open `http://127.0.0.1:4173/fixed.html` in Responsively to compare the corrected
 
 This intentionally exposes an important current product limitation too: a human may perceive one overflowing pricing grid while the current deepest-element detector can report several leaf elements that share the same breakpoint. That is useful evidence for the next root-cause grouping slice.
 
+### Grouped root causes
+
+Slice keeps the deepest overflowing elements as raw evidence, but groups repeated manifestations under a shared overflowing grid or flex layout root when that attribution is deterministic. For the built-in pricing demo, the human-visible problem and machine result now converge:
+
+```text
+390   FAIL  section.plan-grid overflows right ... · affected elements
+430   FAIL  section.plan-grid overflows right ... · affected elements
+768   PASS
+
+Root causes
+  root-1  section.plan-grid · breaks at 743px
+```
+
+The JSON report preserves every leaf issue in `viewports[].issues`, links grouped leaves with `rootCauseId`, and exposes the aggregate in top-level `rootCauses[]`.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.

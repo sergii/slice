@@ -137,6 +137,34 @@ describe('slice CLI', () => {
     expect(report.boundaries[0].boundary).toBe(712);
   });
 
+  it('groups sibling manifestations under one layout root cause', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('grouped-grid.html', [
+      '--widths',
+      '390',
+      '--wait',
+      '0',
+      '--no-boundary',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+
+    expect(report.rootCauses).toHaveLength(1);
+    expect(report.rootCauses[0].selector).toBe('section.grid');
+    expect(report.rootCauses[0].issueIds.length).toBeGreaterThanOrEqual(2);
+    expect(report.summary.rootCauseGroups).toBe(1);
+    expect(
+      report.viewports[0].issues.every(
+        (issue: { rootCauseId?: string }) => issue.rootCauseId === report.rootCauses[0].id,
+      ),
+    ).toBe(true);
+    expect(result.stdout).toContain('section.grid');
+    expect(result.stdout).toContain('affected elements');
+  });
+
   it('is deterministic apart from timestamp and durationMs', async () => {
     const firstOut = await makeOutDir();
     const secondOut = await makeOutDir();

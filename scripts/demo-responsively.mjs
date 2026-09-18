@@ -74,10 +74,6 @@ async function runSlice(url) {
   });
 }
 
-function unique(values) {
-  return [...new Set(values)];
-}
-
 await rm(outDir, { recursive: true, force: true });
 
 const { server, baseUrl } = await startDemoServer(4173);
@@ -110,9 +106,18 @@ try {
   }
 
   const report = JSON.parse(await readFile(path.join(outDir, 'results.json'), 'utf8'));
-  const boundaries = unique(report.boundaries.map((boundary) => boundary.boundary)).sort(
-    (a, b) => a - b,
+  const rootCause = report.rootCauses.find((candidate) =>
+    candidate.selector.includes('plan-grid'),
   );
+
+  if (!rootCause || report.rootCauses.length !== 1) {
+    throw new Error('Expected exactly one grouped pricing-grid root cause');
+  }
+
+  const rootBoundary = rootCause.boundaries[0]?.boundary;
+  if (rootBoundary !== 743) {
+    throw new Error(`Expected pricing-grid boundary 743px, got ${rootBoundary ?? 'none'}`);
+  }
 
   process.stdout.write(
     '\nVisual correlation\n' +
@@ -131,9 +136,15 @@ try {
         .map((viewport) => viewport.width + 'px')
         .join(', ') +
       '\n' +
-      '  Boundary:     ' +
-      boundaries.map((boundary) => boundary + 'px').join(', ') +
+      '  Root cause:   ' +
+      rootCause.selector +
       '\n' +
+      '  Evidence:     ' +
+      rootCause.issueIds.length +
+      ' leaf selectors\n' +
+      '  Boundary:     ' +
+      rootBoundary +
+      'px\n' +
       '  Slice report: .slice/demo-responsively/results.json\n\n' +
       'In Responsively, compare a narrow preview with a 768px+ preview.\n' +
       'The pricing row should visibly run past the right edge below the reported boundary.\n\n' +

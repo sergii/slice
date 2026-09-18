@@ -44,6 +44,7 @@ export interface Issue {
   overflowPx: number;
   bbox: [number, number, number, number];
   viewportWidth: number;
+  rootCauseId?: string;
   evidence: IssueEvidence;
 }
 
@@ -62,6 +63,32 @@ export interface BoundaryResult {
   probesUsed: number;
 }
 
+export interface RootCauseObservation {
+  viewportWidth: number;
+  overflowPx: number;
+  bbox: [number, number, number, number];
+  issueIds: string[];
+}
+
+export interface RootCauseBoundary {
+  boundary: number;
+  lastGoodWidth: number;
+  firstBadWidth: number;
+  probesUsed: number;
+}
+
+export interface RootCause {
+  id: string;
+  type: 'horizontal-overflow';
+  severity: 'error';
+  selector: string;
+  tagName: string;
+  side: 'right' | 'left';
+  issueIds: string[];
+  observations: RootCauseObservation[];
+  boundaries: RootCauseBoundary[];
+}
+
 export interface SliceResults {
   version: 1;
   url: string;
@@ -72,8 +99,10 @@ export interface SliceResults {
     passed: number;
     failed: number;
     totalIssues: number;
+    rootCauseGroups: number;
     durationMs: number;
   };
   viewports: ViewportResult[];
   boundaries: BoundaryResult[];
+  rootCauses: RootCause[];
 }

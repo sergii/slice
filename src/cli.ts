@@ -5,10 +5,20 @@ import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './brows
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { detectHorizontalOverflow } from './detect/overflow.js';
+import { groupHorizontalOverflow } from './grouping.js';
 import { writeResults } from './report.js';
 import { buildStableSelector, makePageUniquenessCheck } from './selector.js';
 import { installStabilization, stabilizeViewport } from './stabilize.js';
-import type { BoundaryResult, Issue, LayoutNode, SliceResults, ViewportResult } from './types.js';
+import type {
+  BoundaryResult,
+  Issue,
+  LayoutNode,
+  RootCause,
+  RootCauseBoundary,
+  RootCauseObservation,
+  SliceResults,
+  ViewportResult,
+} from './types.js';
 
 const DEFAULT_WIDTHS = [320, 375, 390, 430, 768, 1024, 1280, 1440];
 const DEFAULT_HEIGHT = 900;
@@ -30,6 +40,18 @@ interface BoundaryDisplay {
   result: BoundaryResult;
   rangeStart: number;
   rangeEnd: number;
+}
+
+interface CapturedRootCause extends RootCauseObservation {
+  id: string;
+  selector: string;
+  tagName: string;
+  side: 'right' | 'left';
+}
+
+interface CaptureResult {
+  issues: Issue[];
+  rootCauses: CapturedRootCause[];
 }
 
 class SliceCliError extends Error {}
@@ -66,9 +88,14 @@ function truncate(value: string, maxLength: number): string {
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
+function renderIssue(issue: Issue): string {
+  return `${truncate(issue.selector, 60)} overflows ${issue.side} by ${issue.overflowPx}px`;
+}
+
 function renderTable(
   url: string,
   viewports: ViewportResult[],
+  rootCauses: RootCause[],
   boundaries: BoundaryDisplay[],
   outputPath: string,
   durationMs: number,
@@ -85,43 +112,127 @@ function renderTable(
       continue;
     }
 
-    const [first, ...rest] = viewport.issues;
-    if (!first) {
-      process.stdout.write(`  ${width}${colors.red('FAIL')}\n`);
+    const rootsAtWidth = rootCauses
+      .map((rootCause) => ({
+        rootCause,
+        observation: rootCause.observations.find(
+          (observation) => observation.viewportWidth === viewport.width,
+        ),
+      }))
+      .filter(
+        (
+          entry,
+        ): entry is {
+          rootCause: RootCause;
+          observation: RootCauseObservation;
+        } => entry.observation !== undefined,
+      );
+
+    const groupedIssueIds = new Set(
+      rootsAtWidth.flatMap(({ observation }) => observation.issueIds),
+    );
+    const ungroupedIssues = viewport.issues.filter((issue) => !groupedIssueIds.has(issue.id));
+
+    if (rootsAtWidth.length === 0) {
+      const [first, ...rest] = viewport.issues;
+      if (!first) {
+        process.stdout.write(`  ${width}${colors.red('FAIL')}\n`);
+        continue;
+      }
+
+      process.stdout.write(`  ${width}${colors.red('FAIL')}  ${renderIssue(first)}\n`);
+      for (const issue of rest) {
+        process.stdout.write(`        ${renderIssue(issue)}\n`);
+      }
       continue;
     }
 
-    const firstText = `${truncate(first.selector, 60)} overflows ${first.side} by ${first.overflowPx}px`;
-    process.stdout.write(`  ${width}${colors.red('FAIL')}  ${firstText}\n`);
+    let firstLine = true;
 
-    for (const issue of rest) {
-      const text = `${truncate(issue.selector, 60)} overflows ${issue.side} by ${issue.overflowPx}px`;
-      process.stdout.write(`        ${text}\n`);
+    for (const { rootCause, observation } of rootsAtWidth) {
+      const text =
+        `${truncate(rootCause.selector, 60)} overflows ${rootCause.side} by ` +
+        `${observation.overflowPx}px · ${observation.issueIds.length} affected elements`;
+
+      if (firstLine) {
+        process.stdout.write(`  ${width}${colors.red('FAIL')}  ${text}\n`);
+        firstLine = false;
+      } else {
+        process.stdout.write(`        ${text}\n`);
+      }
+
+      const evidence = viewport.issues.filter((issue) => issue.rootCauseId === rootCause.id);
+      for (const issue of evidence.slice(0, 2)) {
+        process.stdout.write(`        evidence: ${renderIssue(issue)}\n`);
+      }
+      if (evidence.length > 2) {
+        process.stdout.write(`        evidence: +${evidence.length - 2} more\n`);
+      }
+    }
+
+    for (const issue of ungroupedIssues) {
+      if (firstLine) {
+        process.stdout.write(`  ${width}${colors.red('FAIL')}  ${renderIssue(issue)}\n`);
+        firstLine = false;
+      } else {
+        process.stdout.write(`        ${renderIssue(issue)}\n`);
+      }
     }
   }
 
-  if (boundaries.length > 0) {
+  if (rootCauses.length > 0) {
+    process.stdout.write('\n  Root causes\n');
+
+    for (const rootCause of rootCauses) {
+      const boundaryText =
+        rootCause.boundaries.length === 1
+          ? ` · breaks at ${rootCause.boundaries[0]?.boundary}px`
+          : rootCause.boundaries.length > 1
+            ? ` · boundaries ${rootCause.boundaries
+                .map((boundary) => `${boundary.boundary}px`)
+                .join(', ')}`
+            : '';
+
+      process.stdout.write(
+        `    ${rootCause.id}  ${rootCause.selector}${boundaryText} · ` +
+          `${rootCause.issueIds.length} evidence selectors\n`,
+      );
+    }
+  }
+
+  const groupedBoundaryIssueIds = new Set(rootCauses.flatMap((rootCause) => rootCause.issueIds));
+  const standaloneBoundaries = boundaries.filter(
+    ({ result }) => !groupedBoundaryIssueIds.has(result.issueId),
+  );
+
+  if (standaloneBoundaries.length > 0) {
     process.stdout.write('\n  Boundaries\n');
 
-    for (const boundary of boundaries) {
+    for (const boundary of standaloneBoundaries) {
       const { result } = boundary;
       const low = Math.min(boundary.rangeStart, boundary.rangeEnd);
       const high = Math.max(boundary.rangeStart, boundary.rangeEnd);
       process.stdout.write(
-        `    ${result.issueId}  breaks at ${result.boundary}px  (${result.probesUsed} probes, range ${low}-${high})\n`,
+        `    ${result.issueId}  breaks at ${result.boundary}px  ` +
+          `(${result.probesUsed} probes, range ${low}-${high})\n`,
       );
     }
   }
 
   const failures = viewports.filter((viewport) => viewport.status === 'fail').length;
   process.stdout.write(
-    `\n  ${failures} failures in ${viewports.length} viewports · ${(durationMs / 1000).toFixed(1)}s\n`,
+    `\n  ${failures} failures in ${viewports.length} viewports · ` +
+      `${(durationMs / 1000).toFixed(1)}s\n`,
   );
   process.stdout.write(`  ${outputPath}\n\n`);
 }
 
 function issueKey(selector: string, side: 'right' | 'left'): string {
   return `horizontal-overflow|${side}|${selector}`;
+}
+
+function rootCauseKey(selector: string, side: 'right' | 'left'): string {
+  return `horizontal-overflow-root|${side}|${selector}`;
 }
 
 async function enrichIssues(
@@ -131,14 +242,52 @@ async function enrichIssues(
   viewportHeight: number,
   metrics: DocumentMetrics,
   issueIds: Map<string, string>,
-): Promise<Issue[]> {
+  rootCauseIds: Map<string, string>,
+): Promise<CaptureResult> {
   const detected = detectHorizontalOverflow(nodes, {
     width: viewportWidth,
     height: viewportHeight,
   });
+  const grouped = groupHorizontalOverflow(
+    nodes,
+    { width: viewportWidth, height: viewportHeight },
+    detected,
+  );
   const byIndex = new Map(nodes.map((node) => [node.index, node]));
   const isUnique = makePageUniquenessCheck(pageEvaluate);
+  const rootCauseByLeaf = new Map<number, { id: string; captured: CapturedRootCause }>();
+
+  for (const group of grouped) {
+    const root = byIndex.get(group.rootNodeIndex);
+    if (!root) continue;
+
+    const selector = await buildStableSelector(root, nodes, isUnique);
+    const key = rootCauseKey(selector, group.side);
+    let id = rootCauseIds.get(key);
+
+    if (!id) {
+      id = `root-${rootCauseIds.size + 1}`;
+      rootCauseIds.set(key, id);
+    }
+
+    const captured: CapturedRootCause = {
+      id,
+      selector,
+      tagName: group.tagName,
+      side: group.side,
+      viewportWidth,
+      overflowPx: group.overflowPx,
+      bbox: group.bbox,
+      issueIds: [],
+    };
+
+    for (const leafNodeIndex of group.leafNodeIndices) {
+      rootCauseByLeaf.set(leafNodeIndex, { id, captured });
+    }
+  }
+
   const issues: Issue[] = [];
+  const issueIdByNode = new Map<number, string>();
 
   for (const finding of detected) {
     const node = byIndex.get(finding.nodeIndex);
@@ -153,6 +302,9 @@ async function enrichIssues(
       issueIds.set(key, id);
     }
 
+    issueIdByNode.set(finding.nodeIndex, id);
+    const rootCauseId = rootCauseByLeaf.get(finding.nodeIndex)?.id;
+
     issues.push({
       id,
       type: 'horizontal-overflow',
@@ -163,6 +315,7 @@ async function enrichIssues(
       overflowPx: finding.overflowPx,
       bbox: finding.bbox,
       viewportWidth,
+      ...(rootCauseId ? { rootCauseId } : {}),
       evidence: {
         documentScrollWidth: metrics.scrollWidth,
         documentClientWidth: metrics.clientWidth,
@@ -177,30 +330,121 @@ async function enrichIssues(
     });
   }
 
-  return issues;
+  const rootCauses = [
+    ...new Map(
+      [...rootCauseByLeaf.values()].map(({ captured }) => [captured.id, captured]),
+    ).values(),
+  ];
+
+  for (const rootCause of rootCauses) {
+    rootCause.issueIds = detected
+      .filter((finding) => rootCauseByLeaf.get(finding.nodeIndex)?.id === rootCause.id)
+      .map((finding) => issueIdByNode.get(finding.nodeIndex))
+      .filter((id): id is string => id !== undefined);
+  }
+
+  return {
+    issues,
+    rootCauses: rootCauses.filter((rootCause) => rootCause.issueIds.length >= 2),
+  };
 }
 
-async function captureIssuesAtWidth(
+async function captureAtWidth(
   width: number,
   height: number,
   waitMs: number,
   runtime: Awaited<ReturnType<typeof launchBrowser>>,
   issueIds: Map<string, string>,
-): Promise<Issue[]> {
+  rootCauseIds: Map<string, string>,
+): Promise<CaptureResult> {
   await stabilizeViewport(runtime.page, width, height, waitMs);
   const metrics = await getDocumentMetrics(runtime.page);
-  if (metrics.scrollWidth <= metrics.clientWidth) return [];
+  if (metrics.scrollWidth <= metrics.clientWidth) {
+    return { issues: [], rootCauses: [] };
+  }
 
   const nodes = await captureLayout(runtime.cdp);
   return enrichIssues(
-    (selector) =>
-      runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
+    (selector) => runtime.page.evaluate((value) => document.querySelectorAll(value).length, selector),
     nodes,
     width,
     height,
     metrics,
     issueIds,
+    rootCauseIds,
   );
+}
+
+function aggregateRootCauses(
+  observations: CapturedRootCause[],
+  boundaries: BoundaryResult[],
+): RootCause[] {
+  const byId = new Map<
+    string,
+    {
+      id: string;
+      selector: string;
+      tagName: string;
+      side: 'right' | 'left';
+      issueIds: Set<string>;
+      observations: RootCauseObservation[];
+    }
+  >();
+
+  for (const observation of observations) {
+    let aggregate = byId.get(observation.id);
+
+    if (!aggregate) {
+      aggregate = {
+        id: observation.id,
+        selector: observation.selector,
+        tagName: observation.tagName,
+        side: observation.side,
+        issueIds: new Set(),
+        observations: [],
+      };
+      byId.set(observation.id, aggregate);
+    }
+
+    observation.issueIds.forEach((issueId) => aggregate.issueIds.add(issueId));
+    aggregate.observations.push({
+      viewportWidth: observation.viewportWidth,
+      overflowPx: observation.overflowPx,
+      bbox: observation.bbox,
+      issueIds: observation.issueIds,
+    });
+  }
+
+  return [...byId.values()].map((aggregate) => {
+    const boundaryByKey = new Map<string, RootCauseBoundary>();
+
+    for (const boundary of boundaries) {
+      if (!aggregate.issueIds.has(boundary.issueId)) continue;
+
+      const key =
+        `${boundary.boundary}|${boundary.lastGoodWidth}|${boundary.firstBadWidth}|` +
+        `${boundary.probesUsed}`;
+
+      boundaryByKey.set(key, {
+        boundary: boundary.boundary,
+        lastGoodWidth: boundary.lastGoodWidth,
+        firstBadWidth: boundary.firstBadWidth,
+        probesUsed: boundary.probesUsed,
+      });
+    }
+
+    return {
+      id: aggregate.id,
+      type: 'horizontal-overflow' as const,
+      severity: 'error' as const,
+      selector: aggregate.selector,
+      tagName: aggregate.tagName,
+      side: aggregate.side,
+      issueIds: [...aggregate.issueIds],
+      observations: aggregate.observations,
+      boundaries: [...boundaryByKey.values()],
+    };
+  });
 }
 
 async function runSlice(url: string, options: CliOptions): Promise<number> {
@@ -217,19 +461,29 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
 
   const viewports: ViewportResult[] = [];
   const issueIds = new Map<string, string>();
+  const rootCauseIds = new Map<string, string>();
+  const rootCauseObservations: CapturedRootCause[] = [];
 
   try {
     await installStabilization(runtime.context);
     await runtime.page.goto(url, { timeout });
 
     for (const width of widths) {
-      const issues = await captureIssuesAtWidth(width, height, waitMs, runtime, issueIds);
+      const captured = await captureAtWidth(
+        width,
+        height,
+        waitMs,
+        runtime,
+        issueIds,
+        rootCauseIds,
+      );
+      rootCauseObservations.push(...captured.rootCauses);
 
       viewports.push({
         width,
         height,
-        status: issues.length > 0 ? 'fail' : 'pass',
-        issues,
+        status: captured.issues.length > 0 ? 'fail' : 'pass',
+        issues: captured.issues,
       });
     }
 
@@ -255,18 +509,19 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
           failWidth,
         );
 
-        const issuesAtBoundary = await captureIssuesAtWidth(
+        const capturedAtBoundary = await captureAtWidth(
           search.firstBadWidth,
           height,
           waitMs,
           runtime,
           issueIds,
+          rootCauseIds,
         );
 
         const fallbackIssues = current.status === 'fail' ? current.issues : next.issues;
         const issueIdsAtBoundary = [
           ...new Set(
-            (issuesAtBoundary.length > 0 ? issuesAtBoundary : fallbackIssues).map(
+            (capturedAtBoundary.issues.length > 0 ? capturedAtBoundary.issues : fallbackIssues).map(
               (issue) => issue.id,
             ),
           ),
@@ -291,6 +546,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
       }
     }
 
+    const rootCauses = aggregateRootCauses(rootCauseObservations, boundaries);
     const durationMs = Date.now() - startedAt;
     const failed = viewports.filter((viewport) => viewport.status === 'fail').length;
     const results: SliceResults = {
@@ -303,10 +559,12 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         passed: viewports.length - failed,
         failed,
         totalIssues: viewports.reduce((sum, viewport) => sum + viewport.issues.length, 0),
+        rootCauseGroups: rootCauses.length,
         durationMs,
       },
       viewports,
       boundaries,
+      rootCauses,
     };
 
     const outputPath = await writeResults(options.out, results);
@@ -314,7 +572,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     if (options.json) {
       process.stdout.write(`${JSON.stringify(results, null, 2)}\n`);
     } else {
-      renderTable(url, viewports, boundaryDisplays, outputPath, durationMs);
+      renderTable(url, viewports, rootCauses, boundaryDisplays, outputPath, durationMs);
     }
 
     return failed > 0 ? 1 : 0;

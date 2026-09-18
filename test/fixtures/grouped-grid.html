@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      section.grid {
+        display: grid;
+        grid-template-columns: repeat(3, 220px);
+        gap: 20px;
+        width: 700px;
+      }
+      article.card { padding: 10px; }
+    </style>
+  </head>
+  <body>
+    <section class="grid">
+      <article class="card"><h2>One</h2><p>First card</p></article>
+      <article class="card"><h2>Two</h2><p>Second card</p></article>
+      <article class="card"><h2>Three</h2><p>Third card</p></article>
+    </section>
+  </body>
+</html>

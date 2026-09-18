@@ -50,13 +50,18 @@ try {
     throw new Error('Broken demo page was expected to fail responsive QA');
   }
 
+  const rootCause = broken.rootCauses.find((candidate) => candidate.selector.includes('plan-grid'));
+  if (!rootCause || broken.rootCauses.length !== 1) {
+    throw new Error('Broken demo page should resolve to one pricing-grid root cause');
+  }
+
   process.stdout.write('\n2) The same page after the responsive CSS fix\n');
 
   const fixedOut = path.join(outRoot, 'fixed');
   const fixedExit = await runCli(baseUrl + '/fixed.html', fixedOut);
   const fixed = await readReport(fixedOut);
 
-  if (fixedExit !== 0 || fixed.summary.failed !== 0) {
+  if (fixedExit !== 0 || fixed.summary.failed !== 0 || fixed.rootCauses.length !== 0) {
     throw new Error('Fixed demo page was expected to pass responsive QA');
   }
 

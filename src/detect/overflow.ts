@@ -115,13 +115,13 @@ function overflowFor(
   return { side: 'left', overflowPx: Math.round(leftOverflow) };
 }
 
-export function detectHorizontalOverflow(
+export function detectHorizontalOverflowCandidates(
   nodes: LayoutNode[],
   viewport: Viewport,
 ): DetectedOverflow[] {
   const nodesByIndex = nodeMap(nodes);
 
-  const candidates = nodes
+  return nodes
     .map((node) => ({ node, overflow: overflowFor(node, viewport) }))
     .filter(
       (
@@ -131,16 +131,7 @@ export function detectHorizontalOverflow(
         overflow: { side: 'right' | 'left'; overflowPx: number };
       } => entry.overflow !== null,
     )
-    .filter(({ node }) => !isLegitimateOverflow(node, nodesByIndex));
-
-  return candidates
-    .filter(
-      ({ node }) =>
-        !candidates.some(
-          ({ node: other }) =>
-            other.index !== node.index && isAncestorOf(node, other, nodesByIndex),
-        ),
-    )
+    .filter(({ node }) => !isLegitimateOverflow(node, nodesByIndex))
     .map(({ node, overflow }) => ({
       nodeIndex: node.index,
       overflowPx: overflow.overflowPx,
@@ -148,4 +139,23 @@ export function detectHorizontalOverflow(
       bbox: [node.rect.x, node.rect.y, node.rect.width, node.rect.height],
       tagName: node.tagName,
     }));
+}
+
+export function detectHorizontalOverflow(
+  nodes: LayoutNode[],
+  viewport: Viewport,
+): DetectedOverflow[] {
+  const nodesByIndex = nodeMap(nodes);
+  const candidates = detectHorizontalOverflowCandidates(nodes, viewport);
+
+  return candidates.filter(({ nodeIndex }) => {
+    const node = nodesByIndex.get(nodeIndex);
+    if (!node) return false;
+
+    return !candidates.some(({ nodeIndex: otherIndex }) => {
+      if (otherIndex === nodeIndex) return false;
+      const other = nodesByIndex.get(otherIndex);
+      return other ? isAncestorOf(node, other, nodesByIndex) : false;
+    });
+  });
 }
