@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slice-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install npm dependencies
+        run: npm install --ignore-scripts
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Smoke test built CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 -m http.server 4173 --directory test/fixtures >/tmp/slice-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+
+          for _ in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:4173/clean.html >/dev/null; then
+              break
+            fi
+            sleep 0.25
+          done
+
+          rm -rf .slice
+          node dist/cli.js http://127.0.0.1:4173/clean.html \
+            --widths 320,390 \
+            --no-boundary \
+            --wait 0
+
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync(".slice/results.json", "utf8"));
+            if (result.summary.failed !== 0) {
+              throw new Error("clean.html smoke test unexpectedly failed");
+            }
+          '
+
+          rm -rf .slice
+          set +e
+          node dist/cli.js http://127.0.0.1:4173/fixed-width.html \
+            --widths 320 \
+            --no-boundary \
+            --wait 0
+          exit_code=$?
+          set -e
+
+          if [ "$exit_code" -ne 1 ]; then
+            echo "Expected fixed-width.html to exit 1, got $exit_code" >&2
+            exit 1
+          fi
+
+          node -e '
+            const fs = require("node:fs");
+            const result = JSON.parse(fs.readFileSync(".slice/results.json", "utf8"));
+            if (result.summary.failed < 1 || result.summary.totalIssues < 1) {
+              throw new Error("fixed-width.html smoke test did not report overflow");
+            }
+          '
