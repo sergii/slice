@@ -83,30 +83,18 @@ export function detectFixedElementCollisions(
       const second = candidates[secondIndex];
       if (!second) continue;
 
-      if (
-        isAncestorOf(first, second, nodesByIndex) ||
-        isAncestorOf(second, first, nodesByIndex)
-      ) {
+      if (isAncestorOf(first, second, nodesByIndex) || isAncestorOf(second, first, nodesByIndex)) {
         continue;
       }
 
       const left = Math.max(first.rect.x, second.rect.x);
       const top = Math.max(first.rect.y, second.rect.y);
-      const right = Math.min(
-        first.rect.x + first.rect.width,
-        second.rect.x + second.rect.width,
-      );
-      const bottom = Math.min(
-        first.rect.y + first.rect.height,
-        second.rect.y + second.rect.height,
-      );
+      const right = Math.min(first.rect.x + first.rect.width, second.rect.x + second.rect.width);
+      const bottom = Math.min(first.rect.y + first.rect.height, second.rect.y + second.rect.height);
       const overlapWidth = right - left;
       const overlapHeight = bottom - top;
 
-      if (
-        overlapWidth <= COLLISION_TOLERANCE_PX ||
-        overlapHeight <= COLLISION_TOLERANCE_PX
-      ) {
+      if (overlapWidth <= COLLISION_TOLERANCE_PX || overlapHeight <= COLLISION_TOLERANCE_PX) {
         continue;
       }
 
