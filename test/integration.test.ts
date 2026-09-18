@@ -243,6 +243,30 @@ describe('slice CLI', () => {
     expect(report.boundaries).toEqual([]);
   });
 
+  it('reports fixed content occlusion without document overflow', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('fixed-occlusion.html', [
+      '--widths',
+      '390',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    expect(report.viewports[0].issues).toHaveLength(1);
+    expect(report.viewports[0].issues[0]).toMatchObject({
+      type: 'fixed-content-occlusion',
+      overlapWidthPx: 100,
+      overlapHeightPx: 48,
+      targetCoveragePct: 63,
+    });
+    expect(result.stdout).toContain('covers');
+    expect(report.boundaries).toEqual([]);
+  });
+
   it('is deterministic apart from timestamp and durationMs', async () => {
     const firstOut = await makeOutDir();
     const secondOut = await makeOutDir();

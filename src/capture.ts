@@ -8,6 +8,7 @@ const COMPUTED_STYLES = [
   'display',
   'visibility',
   'opacity',
+  'pointer-events',
   'z-index',
   'transform',
   'clip-path',

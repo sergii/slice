@@ -180,6 +180,16 @@ Slice also reports deterministic collisions between independent visible `positio
 
 Collision issues are stored as `type: "fixed-element-collision"` with both stable selectors, both bounding boxes, overlap width/height/area, and z-index evidence. Exact breakpoint search currently remains specific to horizontal overflow.
 
+### Fixed-content occlusion detector
+
+Slice reports a fixed element when it paints above and meaningfully covers a visible enabled interactive target from another DOM branch. The rule is intentionally conservative: the target must be actionable, the fixed element must accept pointer events, overlap must exceed the 1px tolerance, and at least 20% of the target's visible area must be covered.
+
+```text
+390   FAIL  button.target-profile covers button.apply | 63% (100x48px)
+```
+
+Occlusion issues are stored as `type: "fixed-content-occlusion"` with the occluder and target selectors, both bounding boxes, overlap area, target coverage percentage, z-index values, and DOMSnapshot paint-order evidence. Fixed-vs-fixed overlaps remain the responsibility of `fixed-element-collision`.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.

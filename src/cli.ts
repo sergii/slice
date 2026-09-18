@@ -7,6 +7,7 @@ import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { findUniqueCssSource } from './css-source.js';
 import { detectFixedElementCollisions } from './detect/fixed-collision.js';
+import { detectFixedContentOcclusions } from './detect/fixed-occlusion.js';
 import { detectHorizontalOverflow, OVERFLOW_TOLERANCE_PX } from './detect/overflow.js';
 import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import { groupHorizontalOverflow } from './grouping.js';
@@ -101,6 +102,13 @@ function renderIssue(issue: Issue): string {
     return (
       `${truncate(issue.selector, 42)} overlaps ${truncate(issue.otherSelector, 42)} | ` +
       `${issue.overlapWidthPx}x${issue.overlapHeightPx}px`
+    );
+  }
+
+  if (issue.type === 'fixed-content-occlusion') {
+    return (
+      `${truncate(issue.selector, 38)} covers ${truncate(issue.targetSelector, 38)} | ` +
+      `${issue.targetCoveragePct}% (${issue.overlapWidthPx}x${issue.overlapHeightPx}px)`
     );
   }
 
@@ -276,6 +284,10 @@ function collisionIssueKey(firstSelector: string, secondSelector: string): strin
   return `fixed-element-collision|${selectors[0]}|${selectors[1]}`;
 }
 
+function occlusionIssueKey(selector: string, targetSelector: string): string {
+  return `fixed-content-occlusion|${selector}|${targetSelector}`;
+}
+
 function rootCauseKey(selector: string, side: 'right' | 'left'): string {
   return `horizontal-overflow-root|${side}|${selector}`;
 }
@@ -294,6 +306,10 @@ async function enrichIssues(
     height: viewportHeight,
   });
   const collisions = detectFixedElementCollisions(nodes, {
+    width: viewportWidth,
+    height: viewportHeight,
+  });
+  const occlusions = detectFixedContentOcclusions(nodes, {
     width: viewportWidth,
     height: viewportHeight,
   });
@@ -455,6 +471,47 @@ async function enrichIssues(
         otherPosition: 'fixed',
         zIndex: ordered.firstNode.styles['z-index'] ?? '',
         otherZIndex: ordered.secondNode.styles['z-index'] ?? '',
+      },
+    });
+  }
+
+  for (const occlusion of occlusions) {
+    const occluderNode = byIndex.get(occlusion.occluderNodeIndex);
+    const targetNode = byIndex.get(occlusion.targetNodeIndex);
+    if (!occluderNode || !targetNode) continue;
+
+    const selector = await buildStableSelector(occluderNode, nodes, isUnique);
+    const targetSelector = await buildStableSelector(targetNode, nodes, isUnique);
+    const key = occlusionIssueKey(selector, targetSelector);
+    let id = issueIds.get(key);
+
+    if (!id) {
+      id = `issue-${issueIds.size + 1}`;
+      issueIds.set(key, id);
+    }
+
+    issues.push({
+      id,
+      type: 'fixed-content-occlusion',
+      severity: 'error',
+      selector,
+      targetSelector,
+      tagName: occluderNode.tagName,
+      targetTagName: targetNode.tagName,
+      overlapWidthPx: occlusion.overlapWidthPx,
+      overlapHeightPx: occlusion.overlapHeightPx,
+      overlapAreaPx: occlusion.overlapAreaPx,
+      targetCoveragePct: occlusion.targetCoveragePct,
+      bbox: occlusion.occluderBbox,
+      targetBbox: occlusion.targetBbox,
+      viewportWidth,
+      evidence: {
+        position: 'fixed',
+        targetPosition: targetNode.styles.position ?? '',
+        zIndex: occluderNode.styles['z-index'] ?? '',
+        targetZIndex: targetNode.styles['z-index'] ?? '',
+        paintOrder: occlusion.occluderPaintOrder,
+        targetPaintOrder: occlusion.targetPaintOrder,
       },
     });
   }

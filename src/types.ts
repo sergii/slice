@@ -70,7 +70,35 @@ export interface FixedElementCollisionIssue {
   };
 }
 
-export type Issue = HorizontalOverflowIssue | FixedElementCollisionIssue;
+export interface FixedContentOcclusionIssue {
+  id: string;
+  type: 'fixed-content-occlusion';
+  severity: 'error';
+  selector: string;
+  targetSelector: string;
+  tagName: string;
+  targetTagName: string;
+  overlapWidthPx: number;
+  overlapHeightPx: number;
+  overlapAreaPx: number;
+  targetCoveragePct: number;
+  bbox: [number, number, number, number];
+  targetBbox: [number, number, number, number];
+  viewportWidth: number;
+  evidence: {
+    position: 'fixed';
+    targetPosition: string;
+    zIndex: string;
+    targetZIndex: string;
+    paintOrder: number;
+    targetPaintOrder: number;
+  };
+}
+
+export type Issue =
+  | HorizontalOverflowIssue
+  | FixedElementCollisionIssue
+  | FixedContentOcclusionIssue;
 
 export interface ViewportResult {
   width: number;

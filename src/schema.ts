@@ -46,9 +46,35 @@ const fixedElementCollisionIssueSchema = z.object({
   }),
 });
 
+const fixedContentOcclusionIssueSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('fixed-content-occlusion'),
+  severity: z.literal('error'),
+  selector: z.string().min(1),
+  targetSelector: z.string().min(1),
+  tagName: z.string().min(1),
+  targetTagName: z.string().min(1),
+  overlapWidthPx: z.number().int().positive(),
+  overlapHeightPx: z.number().int().positive(),
+  overlapAreaPx: z.number().int().positive(),
+  targetCoveragePct: z.number().int().min(1).max(100),
+  bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  targetBbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  viewportWidth: z.number().int().positive(),
+  evidence: z.object({
+    position: z.literal('fixed'),
+    targetPosition: z.string(),
+    zIndex: z.string(),
+    targetZIndex: z.string(),
+    paintOrder: z.number().int().nonnegative(),
+    targetPaintOrder: z.number().int().nonnegative(),
+  }),
+});
+
 export const issueSchema = z.discriminatedUnion('type', [
   horizontalOverflowIssueSchema,
   fixedElementCollisionIssueSchema,
+  fixedContentOcclusionIssueSchema,
 ]);
 
 export const viewportResultSchema = z.object({
