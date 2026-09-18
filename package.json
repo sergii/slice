@@ -1,0 +1,26 @@
+{
+  "name": "slice",
+  "version": "0.1.0",
+  "description": "Deterministic responsive QA for coding agents",
+  "type": "module",
+  "bin": { "slice": "./dist/cli.js" },
+  "engines": { "node": ">=20" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^14.0.1",
+    "picocolors": "^1.1.1",
+    "playwright": "^1.55.0",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
