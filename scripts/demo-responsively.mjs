@@ -51,16 +51,7 @@ async function openResponsively(url) {
 async function runSlice(url) {
   return run(
     process.execPath,
-    [
-      cliPath,
-      url,
-      '--widths',
-      widths,
-      '--wait',
-      '0',
-      '--out',
-      outDir,
-    ],
+    [cliPath, url, '--widths', widths, '--wait', '0', '--out', outDir],
     {
       cwd: root,
       env: process.env,
