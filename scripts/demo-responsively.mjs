@@ -19,33 +19,53 @@ function run(command, args, options = {}) {
   });
 }
 
+async function sleep(ms) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function openResponsively(url) {
   const deepLink = 'responsively://' + url;
-  let command;
-  let args;
 
   if (process.platform === 'darwin') {
-    command = 'open';
-    args = [deepLink];
-  } else if (process.platform === 'win32') {
-    command = 'cmd';
-    args = ['/c', 'start', '', deepLink];
-  } else {
-    command = 'xdg-open';
-    args = [deepLink];
-  }
+    const launchCode = await run('open', ['-a', 'ResponsivelyApp'], { stdio: 'ignore' });
 
-  const code = await run(command, args, { stdio: 'ignore' });
+    if (launchCode === 0) {
+      await sleep(1200);
 
-  if (code !== 0) {
-    process.stdout.write(
-      '\nCould not open the Responsively protocol automatically.\n' +
-        'Open this URL manually in Responsively:\n' +
-        '  ' +
-        url +
-        '\n',
+      const protocolCode = await run('open', [deepLink], { stdio: 'ignore' });
+      if (protocolCode === 0) {
+        return;
+      }
+    }
+
+    const directCode = await run(
+      'open',
+      ['-na', 'ResponsivelyApp', '--args', url],
+      { stdio: 'ignore' },
     );
+
+    if (directCode === 0) {
+      return;
+    }
+  } else if (process.platform === 'win32') {
+    const code = await run('cmd', ['/c', 'start', '', deepLink], { stdio: 'ignore' });
+    if (code === 0) {
+      return;
+    }
+  } else {
+    const code = await run('xdg-open', [deepLink], { stdio: 'ignore' });
+    if (code === 0) {
+      return;
+    }
   }
+
+  process.stdout.write(
+    '\nCould not launch Responsively automatically.\n' +
+      'Open ResponsivelyApp manually, then load:\n' +
+      '  ' +
+      url +
+      '\n',
+  );
 }
 
 async function runSlice(url) {
