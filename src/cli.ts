@@ -6,6 +6,7 @@ import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './brows
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { findUniqueCssSource } from './css-source.js';
+import { detectFixedElementCollisions } from './detect/fixed-collision.js';
 import { detectHorizontalOverflow, OVERFLOW_TOLERANCE_PX } from './detect/overflow.js';
 import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import { groupHorizontalOverflow } from './grouping.js';
@@ -14,6 +15,7 @@ import { buildStableSelector, makePageUniquenessCheck } from './selector.js';
 import { installStabilization, stabilizeViewport } from './stabilize.js';
 import type {
   BoundaryResult,
+  HorizontalOverflowIssue,
   Issue,
   LayoutNode,
   RootCause,
@@ -94,6 +96,13 @@ function truncate(value: string, maxLength: number): string {
 }
 
 function renderIssue(issue: Issue): string {
+  if (issue.type === 'fixed-element-collision') {
+    return (
+      `${truncate(issue.selector, 42)} overlaps ${truncate(issue.otherSelector, 42)} | ` +
+      `${issue.overlapWidthPx}x${issue.overlapHeightPx}px`
+    );
+  }
+
   return `${truncate(issue.selector, 60)} overflows ${issue.side} by ${issue.overflowPx}px`;
 }
 
@@ -173,7 +182,10 @@ function renderTable(
         );
       }
 
-      const evidence = viewport.issues.filter((issue) => issue.rootCauseId === rootCause.id);
+      const evidence = viewport.issues.filter(
+        (issue): issue is HorizontalOverflowIssue =>
+          issue.type === 'horizontal-overflow' && issue.rootCauseId === rootCause.id,
+      );
       for (const issue of evidence.slice(0, 2)) {
         process.stdout.write(`        evidence: ${renderIssue(issue)}\n`);
       }
@@ -258,6 +270,11 @@ function issueKey(selector: string, side: 'right' | 'left'): string {
   return `horizontal-overflow|${side}|${selector}`;
 }
 
+function collisionIssueKey(firstSelector: string, secondSelector: string): string {
+  const selectors = [firstSelector, secondSelector].sort();
+  return `fixed-element-collision|${selectors[0]}|${selectors[1]}`;
+}
+
 function rootCauseKey(selector: string, side: 'right' | 'left'): string {
   return `horizontal-overflow-root|${side}|${selector}`;
 }
@@ -272,6 +289,10 @@ async function enrichIssues(
   rootCauseIds: Map<string, string>,
 ): Promise<CaptureResult> {
   const detected = detectHorizontalOverflow(nodes, {
+    width: viewportWidth,
+    height: viewportHeight,
+  });
+  const collisions = detectFixedElementCollisions(nodes, {
     width: viewportWidth,
     height: viewportHeight,
   });
@@ -379,6 +400,64 @@ async function enrichIssues(
     });
   }
 
+  for (const collision of collisions) {
+    const firstNode = byIndex.get(collision.firstNodeIndex);
+    const secondNode = byIndex.get(collision.secondNodeIndex);
+    if (!firstNode || !secondNode) continue;
+
+    const firstSelector = await buildStableSelector(firstNode, nodes, isUnique);
+    const secondSelector = await buildStableSelector(secondNode, nodes, isUnique);
+
+    const ordered =
+      firstSelector <= secondSelector
+        ? {
+            firstNode,
+            secondNode,
+            firstSelector,
+            secondSelector,
+            firstBbox: collision.firstBbox,
+            secondBbox: collision.secondBbox,
+          }
+        : {
+            firstNode: secondNode,
+            secondNode: firstNode,
+            firstSelector: secondSelector,
+            secondSelector: firstSelector,
+            firstBbox: collision.secondBbox,
+            secondBbox: collision.firstBbox,
+          };
+
+    const key = collisionIssueKey(ordered.firstSelector, ordered.secondSelector);
+    let id = issueIds.get(key);
+
+    if (!id) {
+      id = `issue-${issueIds.size + 1}`;
+      issueIds.set(key, id);
+    }
+
+    issues.push({
+      id,
+      type: 'fixed-element-collision',
+      severity: 'error',
+      selector: ordered.firstSelector,
+      otherSelector: ordered.secondSelector,
+      tagName: ordered.firstNode.tagName,
+      otherTagName: ordered.secondNode.tagName,
+      overlapWidthPx: collision.overlapWidthPx,
+      overlapHeightPx: collision.overlapHeightPx,
+      overlapAreaPx: collision.overlapAreaPx,
+      bbox: ordered.firstBbox,
+      otherBbox: ordered.secondBbox,
+      viewportWidth,
+      evidence: {
+        position: 'fixed',
+        otherPosition: 'fixed',
+        zIndex: ordered.firstNode.styles['z-index'] ?? '',
+        otherZIndex: ordered.secondNode.styles['z-index'] ?? '',
+      },
+    });
+  }
+
   const rootCauses = [
     ...new Map(
       [...rootCauseByLeaf.values()].map(({ captured }) => [captured.id, captured]),
@@ -410,10 +489,6 @@ async function captureAtWidth(
 ): Promise<CaptureResult> {
   await stabilizeViewport(runtime.page, width, height, waitMs);
   const metrics = await getDocumentMetrics(runtime.page);
-  if (metrics.scrollWidth <= metrics.clientWidth) {
-    return { issues: [], rootCauses: [] };
-  }
-
   const nodes = await captureLayout(runtime.cdp);
   return enrichIssues(runtime.page, nodes, width, height, metrics, issueIds, rootCauseIds);
 }
@@ -538,10 +613,16 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
       for (let index = 0; index < viewports.length - 1; index += 1) {
         const current = viewports[index];
         const next = viewports[index + 1];
-        if (!current || !next || current.status === next.status) continue;
+        if (!current || !next) continue;
 
-        const passWidth = current.status === 'pass' ? current.width : next.width;
-        const failWidth = current.status === 'fail' ? current.width : next.width;
+        const currentHasOverflow = current.issues.some(
+          (issue) => issue.type === 'horizontal-overflow',
+        );
+        const nextHasOverflow = next.issues.some((issue) => issue.type === 'horizontal-overflow');
+        if (currentHasOverflow === nextHasOverflow) continue;
+
+        const passWidth = currentHasOverflow ? next.width : current.width;
+        const failWidth = currentHasOverflow ? current.width : next.width;
 
         const search = await findBoundary(
           async (width) => {
@@ -563,10 +644,15 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         );
         rootCauseObservations.push(...capturedAtBoundary.rootCauses);
 
-        const fallbackIssues = current.status === 'fail' ? current.issues : next.issues;
+        const fallbackIssues = (currentHasOverflow ? current.issues : next.issues).filter(
+          (issue): issue is HorizontalOverflowIssue => issue.type === 'horizontal-overflow',
+        );
+        const capturedOverflowIssues = capturedAtBoundary.issues.filter(
+          (issue): issue is HorizontalOverflowIssue => issue.type === 'horizontal-overflow',
+        );
         const issueIdsAtBoundary = [
           ...new Set(
-            (capturedAtBoundary.issues.length > 0 ? capturedAtBoundary.issues : fallbackIssues).map(
+            (capturedOverflowIssues.length > 0 ? capturedOverflowIssues : fallbackIssues).map(
               (issue) => issue.id,
             ),
           ),

@@ -160,6 +160,16 @@ Root causes
 
 Source attribution is intentionally conservative: ambiguous or inaccessible stylesheet matches produce no source claim rather than a guess.
 
+### Fixed-element collision detector
+
+Slice also reports deterministic collisions between independent visible `position: fixed` elements. It ignores full-viewport backdrops, ancestor/descendant fixed pairs, `aria-hidden` subtrees, and overlaps of 1px or less.
+
+```text
+390   FAIL  button.target-profile overlaps button.role-shapes | 80x40px
+```
+
+Collision issues are stored as `type: "fixed-element-collision"` with both stable selectors, both bounding boxes, overlap width/height/area, and z-index evidence. Exact breakpoint search currently remains specific to horizontal overflow.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.

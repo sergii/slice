@@ -22,7 +22,7 @@ export interface Viewport {
   height: number;
 }
 
-export interface IssueEvidence {
+export interface HorizontalOverflowEvidence {
   documentScrollWidth: number;
   documentClientWidth: number;
   elementRight: number;
@@ -34,7 +34,7 @@ export interface IssueEvidence {
   nearestScrollableAncestor: string | null;
 }
 
-export interface Issue {
+export interface HorizontalOverflowIssue {
   id: string;
   type: 'horizontal-overflow';
   severity: 'error';
@@ -45,8 +45,32 @@ export interface Issue {
   bbox: [number, number, number, number];
   viewportWidth: number;
   rootCauseId?: string;
-  evidence: IssueEvidence;
+  evidence: HorizontalOverflowEvidence;
 }
+
+export interface FixedElementCollisionIssue {
+  id: string;
+  type: 'fixed-element-collision';
+  severity: 'error';
+  selector: string;
+  otherSelector: string;
+  tagName: string;
+  otherTagName: string;
+  overlapWidthPx: number;
+  overlapHeightPx: number;
+  overlapAreaPx: number;
+  bbox: [number, number, number, number];
+  otherBbox: [number, number, number, number];
+  viewportWidth: number;
+  evidence: {
+    position: 'fixed';
+    otherPosition: 'fixed';
+    zIndex: string;
+    otherZIndex: string;
+  };
+}
+
+export type Issue = HorizontalOverflowIssue | FixedElementCollisionIssue;
 
 export interface ViewportResult {
   width: number;

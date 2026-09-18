@@ -220,6 +220,29 @@ describe('slice CLI', () => {
     expect(result.stdout).not.toContain('Â');
   });
 
+  it('reports an independent fixed-element collision without document overflow', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('fixed-collision.html', [
+      '--widths',
+      '390',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    expect(report.viewports[0].issues).toHaveLength(1);
+    expect(report.viewports[0].issues[0]).toMatchObject({
+      type: 'fixed-element-collision',
+      overlapWidthPx: 80,
+      overlapHeightPx: 40,
+    });
+    expect(result.stdout).toContain('overlaps');
+    expect(report.boundaries).toEqual([]);
+  });
+
   it('is deterministic apart from timestamp and durationMs', async () => {
     const firstOut = await makeOutDir();
     const secondOut = await makeOutDir();

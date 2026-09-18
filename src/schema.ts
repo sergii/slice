@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const issueSchema = z.object({
+const horizontalOverflowIssueSchema = z.object({
   id: z.string().min(1),
   type: z.literal('horizontal-overflow'),
   severity: z.literal('error'),
@@ -23,6 +23,33 @@ export const issueSchema = z.object({
     nearestScrollableAncestor: z.string().nullable(),
   }),
 });
+
+const fixedElementCollisionIssueSchema = z.object({
+  id: z.string().min(1),
+  type: z.literal('fixed-element-collision'),
+  severity: z.literal('error'),
+  selector: z.string().min(1),
+  otherSelector: z.string().min(1),
+  tagName: z.string().min(1),
+  otherTagName: z.string().min(1),
+  overlapWidthPx: z.number().int().positive(),
+  overlapHeightPx: z.number().int().positive(),
+  overlapAreaPx: z.number().int().positive(),
+  bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  otherBbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
+  viewportWidth: z.number().int().positive(),
+  evidence: z.object({
+    position: z.literal('fixed'),
+    otherPosition: z.literal('fixed'),
+    zIndex: z.string(),
+    otherZIndex: z.string(),
+  }),
+});
+
+export const issueSchema = z.discriminatedUnion('type', [
+  horizontalOverflowIssueSchema,
+  fixedElementCollisionIssueSchema,
+]);
 
 export const viewportResultSchema = z.object({
   width: z.number().int().positive(),
