@@ -14,6 +14,7 @@ export interface LayoutNode {
   styles: Record<string, string>;
   paintOrder: number;
   isVisible: boolean;
+  nthChild?: number;
 }
 
 export interface Viewport {

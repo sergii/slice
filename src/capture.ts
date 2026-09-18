@@ -54,6 +54,22 @@ function decodeAttributes(
   return attributes;
 }
 
+function computeNthChildren(nodes: NodeTreeSnapshot): Map<number, number> {
+  const positions = new Map<number, number>();
+  const countsByParent = new Map<number, number>();
+
+  for (let index = 0; index < (nodes.nodeType?.length ?? 0); index += 1) {
+    if (nodes.nodeType?.[index] !== 1) continue;
+
+    const parentIndex = nodes.parentIndex?.[index] ?? -1;
+    const position = (countsByParent.get(parentIndex) ?? 0) + 1;
+    countsByParent.set(parentIndex, position);
+    positions.set(index, position);
+  }
+
+  return positions;
+}
+
 export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
   const snapshot = await cdp.send('DOMSnapshot.captureSnapshot', {
     computedStyles: [...COMPUTED_STYLES],
@@ -65,6 +81,7 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
   if (!document) return [];
 
   const { nodes, layout } = document;
+  const nthChildren = computeNthChildren(nodes);
   const result: LayoutNode[] = [];
 
   for (let layoutIndex = 0; layoutIndex < layout.nodeIndex.length; layoutIndex += 1) {
@@ -103,6 +120,7 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
       styles,
       paintOrder: layout.paintOrders?.[layoutIndex] ?? 0,
       isVisible,
+      nthChild: nthChildren.get(nodeIndex),
     });
   }
 
