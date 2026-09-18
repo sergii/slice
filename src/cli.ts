@@ -2,10 +2,10 @@ import { Command } from 'commander';
 import pc from 'picocolors';
 import {
   getDocumentMetrics,
-  hasHorizontalDocumentOverflow,
   launchBrowser,
   type DocumentMetrics,
 } from './browser.js';
+import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { detectHorizontalOverflow } from './detect/overflow.js';
 import { writeResults } from './report.js';
@@ -15,6 +15,7 @@ import {
 } from './selector.js';
 import { installStabilization, stabilizeViewport } from './stabilize.js';
 import type {
+  BoundaryResult,
   Issue,
   LayoutNode,
   SliceResults,
@@ -26,6 +27,12 @@ const DEFAULT_HEIGHT = 900;
 const DEFAULT_WAIT_MS = 300;
 const DEFAULT_OUT_DIR = '.slice';
 
+interface BoundaryDisplay {
+  result: BoundaryResult;
+  rangeStart: number;
+  rangeEnd: number;
+}
+
 function truncate(value: string, maxLength: number): string {
   if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 1)}…`;
@@ -34,6 +41,7 @@ function truncate(value: string, maxLength: number): string {
 function renderTable(
   url: string,
   viewports: ViewportResult[],
+  boundaries: BoundaryDisplay[],
   outputPath: string,
   durationMs: number,
 ): void {
@@ -61,6 +69,19 @@ function renderTable(
     for (const issue of rest) {
       const text = `${truncate(issue.selector, 60)} overflows ${issue.side} by ${issue.overflowPx}px`;
       process.stdout.write(`        ${text}\n`);
+    }
+  }
+
+  if (boundaries.length > 0) {
+    process.stdout.write('\n  Boundaries\n');
+
+    for (const boundary of boundaries) {
+      const { result } = boundary;
+      const low = Math.min(boundary.rangeStart, boundary.rangeEnd);
+      const high = Math.max(boundary.rangeStart, boundary.rangeEnd);
+      process.stdout.write(
+        `    ${result.issueId}  breaks at ${result.boundary}px  (${result.probesUsed} probes, range ${low}-${high})\n`,
+      );
     }
   }
 
@@ -131,6 +152,31 @@ async function enrichIssues(
   return issues;
 }
 
+async function captureIssuesAtWidth(
+  width: number,
+  height: number,
+  waitMs: number,
+  runtime: Awaited<ReturnType<typeof launchBrowser>>,
+  issueIds: Map<string, string>,
+): Promise<Issue[]> {
+  await stabilizeViewport(runtime.page, width, height, waitMs);
+  const metrics = await getDocumentMetrics(runtime.page);
+  if (metrics.scrollWidth <= metrics.clientWidth) return [];
+
+  const nodes = await captureLayout(runtime.cdp);
+  return enrichIssues(
+    (selector) => runtime.page.evaluate(
+      (value) => document.querySelectorAll(value).length,
+      selector,
+    ),
+    nodes,
+    width,
+    height,
+    metrics,
+    issueIds,
+  );
+}
+
 const program = new Command();
 
 program
@@ -152,29 +198,11 @@ program
       await runtime.page.goto(url, { timeout: 30_000 });
 
       for (const width of DEFAULT_WIDTHS) {
-        await stabilizeViewport(runtime.page, width, DEFAULT_HEIGHT, DEFAULT_WAIT_MS);
-        const metrics = await getDocumentMetrics(runtime.page);
-
-        if (!await hasHorizontalDocumentOverflow(runtime.page)) {
-          viewports.push({
-            width,
-            height: DEFAULT_HEIGHT,
-            status: 'pass',
-            issues: [],
-          });
-          continue;
-        }
-
-        const nodes = await captureLayout(runtime.cdp);
-        const issues = await enrichIssues(
-          (selector) => runtime.page.evaluate(
-            (value) => document.querySelectorAll(value).length,
-            selector,
-          ),
-          nodes,
+        const issues = await captureIssuesAtWidth(
           width,
           DEFAULT_HEIGHT,
-          metrics,
+          DEFAULT_WAIT_MS,
+          runtime,
           issueIds,
         );
 
@@ -184,6 +212,59 @@ program
           status: issues.length > 0 ? 'fail' : 'pass',
           issues,
         });
+      }
+
+      const boundaries: BoundaryResult[] = [];
+      const boundaryDisplays: BoundaryDisplay[] = [];
+
+      for (let index = 0; index < viewports.length - 1; index += 1) {
+        const current = viewports[index];
+        const next = viewports[index + 1];
+        if (!current || !next || current.status === next.status) continue;
+
+        const passWidth = current.status === 'pass' ? current.width : next.width;
+        const failWidth = current.status === 'fail' ? current.width : next.width;
+
+        const search = await findBoundary(
+          async (width) => {
+            await stabilizeViewport(runtime.page, width, DEFAULT_HEIGHT, DEFAULT_WAIT_MS);
+            const metrics = await getDocumentMetrics(runtime.page);
+            return metrics.scrollWidth > metrics.clientWidth;
+          },
+          passWidth,
+          failWidth,
+        );
+
+        const issuesAtBoundary = await captureIssuesAtWidth(
+          search.firstBadWidth,
+          DEFAULT_HEIGHT,
+          DEFAULT_WAIT_MS,
+          runtime,
+          issueIds,
+        );
+
+        const fallbackIssues = current.status === 'fail' ? current.issues : next.issues;
+        const issueIdsAtBoundary = [
+          ...new Set((issuesAtBoundary.length > 0 ? issuesAtBoundary : fallbackIssues)
+            .map((issue) => issue.id)),
+        ];
+
+        for (const issueId of issueIdsAtBoundary) {
+          const result: BoundaryResult = {
+            issueId,
+            boundary: search.boundary,
+            lastGoodWidth: search.lastGoodWidth,
+            firstBadWidth: search.firstBadWidth,
+            probesUsed: search.probesUsed,
+          };
+
+          boundaries.push(result);
+          boundaryDisplays.push({
+            result,
+            rangeStart: current.width,
+            rangeEnd: next.width,
+          });
+        }
       }
 
       const durationMs = Date.now() - startedAt;
@@ -201,11 +282,11 @@ program
           durationMs,
         },
         viewports,
-        boundaries: [],
+        boundaries,
       };
 
       const outputPath = await writeResults(DEFAULT_OUT_DIR, results);
-      renderTable(url, viewports, outputPath, durationMs);
+      renderTable(url, viewports, boundaryDisplays, outputPath, durationMs);
     } finally {
       await runtime.browser.close();
     }
