@@ -190,10 +190,7 @@ export function detectFixedContentOcclusions(
       const overlapWidth = right - left;
       const overlapHeight = bottom - top;
 
-      if (
-        overlapWidth <= OCCLUSION_TOLERANCE_PX ||
-        overlapHeight <= OCCLUSION_TOLERANCE_PX
-      ) {
+      if (overlapWidth <= OCCLUSION_TOLERANCE_PX || overlapHeight <= OCCLUSION_TOLERANCE_PX) {
         continue;
       }
 
