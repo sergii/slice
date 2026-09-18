@@ -7,6 +7,11 @@ export interface BrowserRuntime {
   cdp: CDPSession;
 }
 
+export interface DocumentMetrics {
+  scrollWidth: number;
+  clientWidth: number;
+}
+
 export async function launchBrowser(
   viewport: { width: number; height: number },
 ): Promise<BrowserRuntime> {
@@ -23,4 +28,16 @@ export async function launchBrowser(
   const cdp = await context.newCDPSession(page);
 
   return { browser, context, page, cdp };
+}
+
+export async function getDocumentMetrics(page: Page): Promise<DocumentMetrics> {
+  return page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }));
+}
+
+export async function hasHorizontalDocumentOverflow(page: Page): Promise<boolean> {
+  const metrics = await getDocumentMetrics(page);
+  return metrics.scrollWidth > metrics.clientWidth;
 }
