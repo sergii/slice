@@ -26,7 +26,7 @@
     "postinstall": "playwright install chromium",
     "demo": "npm run build --silent && node scripts/demo.mjs",
     "demo:serve": "node scripts/demo-server.mjs",
-    "demo:scan": "npm run build --silent && node dist/cli.mjs http://127.0.0.1:4173/broken.html --widths 320,390,430,768,1024 --out .slice/demo-manual",
+    "demo:scan": "npm run build --silent && node dist/cli.mjs http://127.0.0.1:4173/broken.html --widths 320,390,430,742,743,744,768,1024 --out .slice/demo-manual",
     "demo:visual": "npm run build --silent && node scripts/demo-responsively.mjs",
     "demo:responsively:check": "node scripts/demo-responsively.mjs --no-open --once"
   },

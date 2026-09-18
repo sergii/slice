@@ -117,6 +117,15 @@ visible element            <=>  CSS selector + overflowPx
 
 Open `http://127.0.0.1:4173/fixed.html` in Responsively to compare the corrected version. Slice writes the broken-page evidence to `.slice/demo-responsively/results.json`.
 
+For the exact boundary experiment, Slice also scans `742`, `743`, and `744` pixels. A ready-to-import Responsively backup lives at:
+
+```text
+examples/responsively/slice-boundary-suite.json
+```
+
+Import it from Responsively's device/suite manager, then activate **Slice Boundary 742-744**. This gives three side-by-side previews around the same boundary that Slice reports. The demo intentionally prints the observed PASS/FAIL state for all three widths so detector and boundary-search semantics can be compared directly.
+
+
 This intentionally exposes an important current product limitation too: a human may perceive one overflowing pricing grid while the current deepest-element detector can report several leaf elements that share the same breakpoint. That is useful evidence for the next root-cause grouping slice.
 
 ### Grouped root causes

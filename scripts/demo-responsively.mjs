@@ -7,7 +7,7 @@ import { closeDemoServer, startDemoServer } from './demo-server.mjs';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cliPath = path.join(root, 'dist', 'cli.mjs');
 const outDir = path.join(root, '.slice', 'demo-responsively');
-const widths = '320,390,430,768,1024';
+const widths = '320,390,430,742,743,744,768,1024';
 const shouldOpenResponsively = !process.argv.includes('--no-open');
 const shouldExitAfterScan = process.argv.includes('--once');
 
@@ -139,6 +139,14 @@ try {
     throw new Error(`Expected pricing-grid boundary 743px, got ${rootBoundary ?? 'none'}`);
   }
 
+  const boundaryViewports = [742, 743, 744].map((width) => {
+    const viewport = report.viewports.find((candidate) => candidate.width === width);
+    if (!viewport) {
+      throw new Error(`Missing golden boundary viewport ${width}px`);
+    }
+    return viewport;
+  });
+
   process.stdout.write(
     '\nVisual correlation\n' +
       '  Same URL:     ' +
@@ -178,9 +186,22 @@ try {
       '  Boundary:     ' +
       rootBoundary +
       'px\n' +
+      '  Near boundary:' +
+      '\n' +
+      boundaryViewports
+        .map(
+          (viewport) =>
+            '    ' +
+            viewport.width +
+            'px  ' +
+            viewport.status.toUpperCase(),
+        )
+        .join('\n') +
+      '\n' +
       '  Slice report: .slice/demo-responsively/results.json\n\n' +
-      'In Responsively, compare a narrow preview with a 768px+ preview.\n' +
-      'The pricing row should visibly run past the right edge below the reported boundary.\n\n' +
+      'For visual boundary verification in Responsively, import:\n' +
+      '  examples/responsively/slice-boundary-suite.json\n' +
+      'and activate the "Slice Boundary 742-744" preview suite.\n\n' +
       'Fixed comparison:\n' +
       '  ' +
       fixedUrl +
