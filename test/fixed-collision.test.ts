@@ -74,6 +74,36 @@ describe('detectFixedElementCollisions', () => {
     expect(detectFixedElementCollisions(nodes, { width: 390, height: 900 })).toEqual([]);
   });
 
+  it('ignores fully offscreen fixed elements', () => {
+    const nodes = [
+      node(1, -1, { rect: { x: 500, y: 820, width: 180, height: 48 } }),
+      node(2, -1, { rect: { x: 520, y: 830, width: 110, height: 48 } }),
+    ];
+
+    expect(detectFixedElementCollisions(nodes, { width: 390, height: 900 })).toEqual([]);
+  });
+
+  it('ignores effectively transparent fixed elements', () => {
+    const nodes = [
+      node(1, -1, {
+        rect: { x: 180, y: 820, width: 180, height: 48 },
+        styles: {
+          position: 'fixed',
+          overflow: 'visible',
+          'overflow-x': 'visible',
+          display: 'block',
+          visibility: 'visible',
+          opacity: '0',
+          transform: 'none',
+          'z-index': '10',
+        },
+      }),
+      node(2, -1, { rect: { x: 260, y: 830, width: 110, height: 48 } }),
+    ];
+
+    expect(detectFixedElementCollisions(nodes, { width: 390, height: 900 })).toEqual([]);
+  });
+
   it('ignores aria-hidden fixed elements', () => {
     const nodes = [
       node(1, -1, {

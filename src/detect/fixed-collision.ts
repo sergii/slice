@@ -44,6 +44,30 @@ function isAriaHidden(node: LayoutNode, nodesByIndex: Map<number, LayoutNode>): 
   );
 }
 
+function isEffectivelyTransparent(
+  node: LayoutNode,
+  nodesByIndex: Map<number, LayoutNode>,
+): boolean {
+  const transparent = (candidate: LayoutNode): boolean => {
+    const opacity = Number(candidate.styles.opacity);
+    return Number.isFinite(opacity) && opacity <= 0.01;
+  };
+
+  return transparent(node) || ancestorsOf(node, nodesByIndex).some(transparent);
+}
+
+function intersectsViewport(node: LayoutNode, viewport: Viewport): boolean {
+  const right = node.rect.x + node.rect.width;
+  const bottom = node.rect.y + node.rect.height;
+
+  return (
+    right > COLLISION_TOLERANCE_PX &&
+    bottom > COLLISION_TOLERANCE_PX &&
+    node.rect.x < viewport.width - COLLISION_TOLERANCE_PX &&
+    node.rect.y < viewport.height - COLLISION_TOLERANCE_PX
+  );
+}
+
 function coversViewport(node: LayoutNode, viewport: Viewport): boolean {
   const right = node.rect.x + node.rect.width;
   const bottom = node.rect.y + node.rect.height;
@@ -69,6 +93,8 @@ export function detectFixedElementCollisions(
     if (node.tagName === 'HTML' || node.tagName === 'BODY') return false;
     if (node.styles.position?.toLowerCase() !== 'fixed') return false;
     if (isAriaHidden(node, nodesByIndex)) return false;
+    if (isEffectivelyTransparent(node, nodesByIndex)) return false;
+    if (!intersectsViewport(node, viewport)) return false;
     if (coversViewport(node, viewport)) return false;
     return true;
   });

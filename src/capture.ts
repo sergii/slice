@@ -7,6 +7,7 @@ const COMPUTED_STYLES = [
   'overflow-x',
   'display',
   'visibility',
+  'opacity',
   'z-index',
   'transform',
   'clip-path',
