@@ -60,3 +60,6 @@ jobs:
 
       - name: Smoke test built CLI
         run: npm run smoke
+
+      - name: Demo project
+        run: npm run demo

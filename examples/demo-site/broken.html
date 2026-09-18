@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slice demo · Broken</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="broken">
+    <div class="site-shell">
+      <header>
+        <div class="brand">ExampleCloud</div>
+        <nav aria-label="Primary">
+          <a href="/">Demo home</a>
+          <a href="/broken.html">Broken</a>
+          <a href="/fixed.html">Fixed</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero">
+          <p class="eyebrow">Slice demo project</p>
+          <h1>A real responsive bug, on purpose.</h1>
+          <p class="lede">
+            This page is a standalone static mini-project. Slice sees it only through HTTP and Chromium,
+            exactly like it would see a Rails, React, or Next.js preview deployment.
+          </p>
+        </section>
+
+        <p class="demo-note">
+          Resize below roughly 744px. The pricing grid keeps its desktop width and overflows the viewport.
+        </p>
+
+        <section class="plan-grid" aria-label="Pricing plans">
+          <article class="plan">
+            <h2>Starter</h2>
+            <div class="price">$0</div>
+            <p>For small prototypes and local experiments.</p>
+            <span class="status">1 project</span>
+          </article>
+
+          <article class="plan featured">
+            <h2>Build</h2>
+            <div class="price">$19</div>
+            <p>For teams shipping responsive web applications.</p>
+            <span class="status">Recommended</span>
+          </article>
+
+          <article class="plan">
+            <h2>Scale</h2>
+            <div class="price">$49</div>
+            <p>For larger teams with multiple preview environments.</p>
+            <span class="status">Unlimited projects</span>
+          </article>
+        </section>
+
+        <div class="page-links">
+          <a href="/broken.html">Broken version</a>
+          <a href="/fixed.html">Fixed version</a>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

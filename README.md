@@ -56,6 +56,36 @@ npx slice http://localhost:3000
 }
 ```
 
+## Five-minute local demo
+
+The first demo is intentionally framework-neutral. Slice consumes a URL, so a static page exercises the same browser/CDP path as Rails, React, or Next.js without adding another framework to debug.
+
+```bash
+git clone https://github.com/sergii/slice.git
+cd slice
+npm ci
+npm run demo
+```
+
+The demo scans a small standalone pricing site twice: first with an intentional responsive overflow, then with the CSS fix. JSON reports are kept at:
+
+```text
+.slice/demo/broken/results.json
+.slice/demo/fixed/results.json
+```
+
+To see the bug in a browser:
+
+```bash
+npm run demo:serve
+```
+
+Open `http://127.0.0.1:4173/broken.html`, resize below roughly 744px, and compare it with `/fixed.html`. From a second terminal you can run the production CLI against the live demo:
+
+```bash
+npm run demo:scan
+```
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.
