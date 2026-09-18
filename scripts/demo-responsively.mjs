@@ -38,11 +38,9 @@ async function openResponsively(url) {
       }
     }
 
-    const directCode = await run(
-      'open',
-      ['-na', 'ResponsivelyApp', '--args', url],
-      { stdio: 'ignore' },
-    );
+    const directCode = await run('open', ['-na', 'ResponsivelyApp', '--args', url], {
+      stdio: 'ignore',
+    });
 
     if (directCode === 0) {
       return;
