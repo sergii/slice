@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Command, CommanderError } from 'commander';
 import pc from 'picocolors';
 import {

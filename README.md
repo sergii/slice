@@ -55,3 +55,38 @@ npx slice http://localhost:3000
   ]
 }
 ```
+
+## Local modernization lab
+
+Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.
+
+```bash
+git pull
+npm ci
+npm run lab
+```
+
+`npm ci` installs the locked dependencies and Playwright Chromium. The lab then runs the same layers as CI:
+
+1. Oxfmt formatting check.
+2. Oxlint static analysis.
+3. TypeScript typecheck.
+4. Pure unit tests.
+5. tsdown production build.
+6. npm package validation.
+7. Browser integration tests.
+8. Real CLI smoke scenarios against local fixtures.
+
+The final smoke phase is intentionally visible. It runs a clean page, a fixed-width overflow page, and the breakpoint fixture that must resolve to exactly 712px.
+
+For the fastest agent feedback without Chromium, run:
+
+```bash
+npm run check:fast
+```
+
+To run only the visible product smoke after a successful build:
+
+```bash
+npm run smoke
+```
