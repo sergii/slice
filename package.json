@@ -8,8 +8,11 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsup",
-    "test": "npm run build && vitest run",
     "typecheck": "tsc --noEmit",
+    "test": "npm run build && vitest run",
+    "test:unit": "vitest run test/boundary.test.ts test/overflow.test.ts test/selector.test.ts",
+    "test:integration": "vitest run test/integration.test.ts",
+    "validate:package": "npm pack --dry-run --ignore-scripts",
     "postinstall": "playwright install chromium"
   },
   "dependencies": {
