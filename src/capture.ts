@@ -5,6 +5,7 @@ const COMPUTED_STYLES = [
   'position',
   'overflow',
   'overflow-x',
+  'overflow-y',
   'display',
   'visibility',
   'opacity',

@@ -140,6 +140,37 @@ describe('detectFixedContentOcclusions', () => {
     expect(detectFixedContentOcclusions(nodes, { width: 390, height: 900 })).toEqual([]);
   });
 
+  it('ignores interactive targets inside a scrollable ancestor', () => {
+    const nodes = [
+      node(1, -1, {
+        tagName: 'MAIN',
+        styles: {
+          position: 'static',
+          display: 'block',
+          visibility: 'visible',
+          opacity: '1',
+          'pointer-events': 'auto',
+          overflow: 'visible',
+          'overflow-y': 'auto',
+          'z-index': 'auto',
+        },
+        rect: { x: 0, y: 0, width: 390, height: 820 },
+      }),
+      node(2, 1, {
+        tagName: 'BUTTON',
+        rect: { x: 200, y: 760, width: 120, height: 40 },
+        paintOrder: 2,
+      }),
+      node(3, -1, {
+        rect: { x: 220, y: 760, width: 100, height: 40 },
+        styles: { position: 'fixed', 'pointer-events': 'auto' },
+        paintOrder: 10,
+      }),
+    ];
+
+    expect(detectFixedContentOcclusions(nodes, { width: 390, height: 900 })).toEqual([]);
+  });
+
   it('ignores targets from the same DOM branch', () => {
     const nodes = [
       node(1, -1, {

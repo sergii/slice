@@ -77,6 +77,22 @@ function hasPointerEvents(node: LayoutNode, nodesByIndex: Map<number, LayoutNode
   return !blocked(node) && !ancestorsOf(node, nodesByIndex).some(blocked);
 }
 
+function hasScrollableAncestor(
+  node: LayoutNode,
+  nodesByIndex: Map<number, LayoutNode>,
+): boolean {
+  return ancestorsOf(node, nodesByIndex).some((ancestor) => {
+    const overflow = ancestor.styles.overflow?.toLowerCase();
+    const overflowY = ancestor.styles['overflow-y']?.toLowerCase();
+    return (
+      overflow === 'auto' ||
+      overflow === 'scroll' ||
+      overflowY === 'auto' ||
+      overflowY === 'scroll'
+    );
+  });
+}
+
 function intersectsViewport(node: LayoutNode, viewport: Viewport): boolean {
   const right = node.rect.x + node.rect.width;
   const bottom = node.rect.y + node.rect.height;
@@ -158,6 +174,7 @@ export function detectFixedContentOcclusions(
     if (isAriaHidden(node, nodesByIndex)) return false;
     if (isEffectivelyTransparent(node, nodesByIndex)) return false;
     if (!hasPointerEvents(node, nodesByIndex)) return false;
+    if (hasScrollableAncestor(node, nodesByIndex)) return false;
     if (!intersectsViewport(node, viewport)) return false;
     return true;
   });
