@@ -359,12 +359,11 @@ program
 try {
   await program.parseAsync();
 } catch (error) {
-  const message = error instanceof CommanderError
-    ? error.message
-    : error instanceof Error
-      ? error.message
-      : String(error);
-
-  process.stderr.write(`Slice: ${message}\n`);
-  process.exitCode = 2;
+  if (error instanceof CommanderError && error.exitCode === 0) {
+    process.exitCode = 0;
+  } else {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`Slice: ${message}\n`);
+    process.exitCode = 2;
+  }
 }

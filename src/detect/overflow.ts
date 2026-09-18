@@ -50,13 +50,39 @@ function clipsHorizontalOverflow(node: LayoutNode): boolean {
   return clippingValues.has(overflowX) || clippingValues.has(overflow);
 }
 
+function parseTransformNumbers(transform: string): number[] {
+  const start = transform.indexOf('(');
+  const end = transform.lastIndexOf(')');
+  if (start === -1 || end === -1 || end <= start) return [];
+
+  return transform
+    .slice(start + 1, end)
+    .split(',')
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isFinite(value));
+}
+
 function hasTranslatedTransform(node: LayoutNode): boolean {
   const transform = node.styles.transform?.trim().toLowerCase();
   if (!transform || transform === 'none') return false;
+  if (transform.includes('translate')) return true;
 
-  return transform.includes('translate')
-    || transform.startsWith('matrix(')
-    || transform.startsWith('matrix3d(');
+  if (transform.startsWith('matrix3d(')) {
+    const values = parseTransformNumbers(transform);
+    return values.length === 16
+      && (Math.abs(values[12] ?? 0) > 0.01
+        || Math.abs(values[13] ?? 0) > 0.01
+        || Math.abs(values[14] ?? 0) > 0.01);
+  }
+
+  if (transform.startsWith('matrix(')) {
+    const values = parseTransformNumbers(transform);
+    return values.length === 6
+      && (Math.abs(values[4] ?? 0) > 0.01
+        || Math.abs(values[5] ?? 0) > 0.01);
+  }
+
+  return false;
 }
 
 function isLegitimateOverflow(
