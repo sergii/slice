@@ -135,8 +135,8 @@ try {
   }
 
   const rootBoundary = rootCause.boundaries[0]?.boundary;
-  if (rootBoundary !== 743) {
-    throw new Error(`Expected pricing-grid boundary 743px, got ${rootBoundary ?? 'none'}`);
+  if (rootBoundary !== 742) {
+    throw new Error(`Expected pricing-grid boundary 742px, got ${rootBoundary ?? 'none'}`);
   }
 
   const boundaryViewports = [742, 743, 744].map((width) => {
@@ -146,6 +146,15 @@ try {
     }
     return viewport;
   });
+
+  const boundaryStatuses = boundaryViewports.map((viewport) => viewport.status);
+  if (boundaryStatuses.join(',') !== 'fail,pass,pass') {
+    throw new Error(
+      `Expected 742 FAIL / 743 PASS / 744 PASS, got ${boundaryViewports
+        .map((viewport) => `${viewport.width} ${viewport.status.toUpperCase()}`)
+        .join(' / ')}`,
+    );
+  }
 
   process.stdout.write(
     '\nVisual correlation\n' +

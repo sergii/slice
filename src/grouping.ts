@@ -1,4 +1,5 @@
 import { detectHorizontalOverflowCandidates, type DetectedOverflow } from './detect/overflow.js';
+import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import type { LayoutNode, Viewport } from './types.js';
 
 const LAYOUT_DISPLAYS = new Set(['flex', 'grid', 'inline-flex', 'inline-grid']);
@@ -33,8 +34,6 @@ export function groupHorizontalOverflow(
   viewport: Viewport,
   leafFindings: DetectedOverflow[],
 ): OverflowRootCauseFinding[] {
-  if (leafFindings.length < 2) return [];
-
   const nodesByIndex = new Map(nodes.map((node) => [node.index, node]));
   const candidates = detectHorizontalOverflowCandidates(nodes, viewport);
   const candidateByIndex = new Map(candidates.map((candidate) => [candidate.nodeIndex, candidate]));
@@ -64,7 +63,12 @@ export function groupHorizontalOverflow(
 
       const display = ancestor.styles.display?.toLowerCase();
       if (!display || !LAYOUT_DISPLAYS.has(display)) continue;
-      if (descendantCount(ancestorIndex, leaf.side) < 2) continue;
+
+      const affectedLeaves = descendantCount(ancestorIndex, leaf.side);
+      const hasDeterministicConstraint =
+        diagnoseHorizontalOverflowRoot(ancestor, viewport.width).diagnosis !== null;
+
+      if (affectedLeaves < 2 && !hasDeterministicConstraint) continue;
 
       rootByLeaf.set(leaf.nodeIndex, candidate);
       break;

@@ -137,6 +137,37 @@ describe('slice CLI', () => {
     expect(report.boundaries[0].boundary).toBe(712);
   });
 
+  it('uses the same 1px tolerance for viewport status and boundary search', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('tolerance-boundary.html', [
+      '--widths',
+      '399,400,401',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+
+    expect(
+      report.viewports.map((viewport: { width: number; status: string }) => [
+        viewport.width,
+        viewport.status,
+      ]),
+    ).toEqual([
+      [399, 'fail'],
+      [400, 'pass'],
+      [401, 'pass'],
+    ]);
+    expect(report.boundaries[0]).toMatchObject({
+      boundary: 399,
+      lastGoodWidth: 400,
+      firstBadWidth: 399,
+    });
+  });
+
   it('groups sibling manifestations under one layout root cause', async () => {
     const out = await makeOutDir();
     const result = await runCli('grouped-grid.html', [

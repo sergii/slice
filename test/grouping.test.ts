@@ -59,6 +59,38 @@ describe('groupHorizontalOverflow', () => {
     ]);
   });
 
+  it('keeps a single near-boundary leaf under a diagnosed layout root', () => {
+    const nodes = [
+      node(1, -1, {
+        attributes: { class: 'plan-grid' },
+        rect: { x: 24, y: 0, width: 720, height: 200 },
+        styles: {
+          position: 'static',
+          overflow: 'visible',
+          'overflow-x': 'visible',
+          display: 'grid',
+          visibility: 'visible',
+          transform: 'none',
+          'min-width': '720px',
+        },
+      }),
+      node(2, 1, { rect: { x: 734, y: 20, width: 10, height: 20 } }),
+    ];
+    const viewport = { width: 742, height: 900 };
+    const leaves = detectHorizontalOverflow(nodes, viewport);
+    const groups = groupHorizontalOverflow(nodes, viewport, leaves);
+
+    expect(leaves.map((finding) => finding.nodeIndex)).toEqual([2]);
+    expect(groups).toEqual([
+      expect.objectContaining({
+        rootNodeIndex: 1,
+        side: 'right',
+        overflowPx: 2,
+        leafNodeIndices: [2],
+      }),
+    ]);
+  });
+
   it('does not merge unrelated leaf findings without a shared layout root', () => {
     const nodes = [
       node(1, -1, { rect: { x: 0, y: 0, width: 500, height: 40 } }),

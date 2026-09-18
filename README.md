@@ -123,7 +123,7 @@ For the exact boundary experiment, Slice also scans `742`, `743`, and `744` pixe
 examples/responsively/slice-boundary-suite.json
 ```
 
-Import it from Responsively's device/suite manager, then activate **Slice Boundary 742-744**. This gives three side-by-side previews around the same boundary that Slice reports. The demo intentionally prints the observed PASS/FAIL state for all three widths so detector and boundary-search semantics can be compared directly.
+Import it from Responsively's device/suite manager, then activate **Slice Boundary 742-744**. This gives three side-by-side previews around the same boundary that Slice reports. With the shared 1px overflow tolerance, the golden result is `742 FAIL / 743 PASS / 744 PASS`, and the reported boundary is `742px` - the last bad width when moving from wide to narrow.
 
 
 This intentionally exposes an important current product limitation too: a human may perceive one overflowing pricing grid while the current deepest-element detector can report several leaf elements that share the same breakpoint. That is useful evidence for the next root-cause grouping slice.
@@ -138,7 +138,7 @@ Slice keeps the deepest overflowing elements as raw evidence, but groups repeate
 768   PASS
 
 Root causes
-  root-1  section.plan-grid · breaks at 743px
+  root-1  section.plan-grid · breaks at 742px
 ```
 
 The JSON report preserves every leaf issue in `viewports[].issues`, links grouped leaves with `rootCauseId`, and exposes the aggregate in top-level `rootCauses[]`.
@@ -152,7 +152,7 @@ For grouped layout roots, Slice can explain a conservative CSS cause without AI.
       reason: min-width: 720px | 720px wide vs 372px available
 
 Root causes
-  root-1  section.plan-grid | breaks at 743px | 8 evidence selectors
+  root-1  section.plan-grid | breaks at 742px | 8 evidence selectors
           reason: min-width: 720px
           source: .broken .plan-grid @ http://127.0.0.1:4173/styles.css
           likely fix: remove or constrain min-width, or let the layout reflow

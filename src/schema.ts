@@ -58,7 +58,7 @@ const rootCauseObservationSchema = z.object({
   viewportWidth: z.number().int().positive(),
   overflowPx: z.number().int().positive(),
   bbox: z.tuple([z.number(), z.number(), z.number(), z.number()]),
-  issueIds: z.array(z.string().min(1)).min(2),
+  issueIds: z.array(z.string().min(1)).min(1),
   computedWidthPx: z.number().int().nonnegative(),
   availableWidthPx: z.number().int().nonnegative(),
 });

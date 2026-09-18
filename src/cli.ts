@@ -6,7 +6,7 @@ import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './brows
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
 import { findUniqueCssSource } from './css-source.js';
-import { detectHorizontalOverflow } from './detect/overflow.js';
+import { detectHorizontalOverflow, OVERFLOW_TOLERANCE_PX } from './detect/overflow.js';
 import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import { groupHorizontalOverflow } from './grouping.js';
 import { writeResults } from './report.js';
@@ -394,7 +394,9 @@ async function enrichIssues(
 
   return {
     issues,
-    rootCauses: rootCauses.filter((rootCause) => rootCause.issueIds.length >= 2),
+    rootCauses: rootCauses.filter(
+      (rootCause) => rootCause.issueIds.length >= 2 || rootCause.diagnosis !== undefined,
+    ),
   };
 }
 
@@ -545,7 +547,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
           async (width) => {
             await stabilizeViewport(runtime.page, width, height, waitMs);
             const metrics = await getDocumentMetrics(runtime.page);
-            return metrics.scrollWidth > metrics.clientWidth;
+            return metrics.scrollWidth - metrics.clientWidth > OVERFLOW_TOLERANCE_PX;
           },
           passWidth,
           failWidth,
