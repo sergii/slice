@@ -1,5 +1,7 @@
 # Platform Adapters
 
+This guide follows [ADR-0001](adr/0001-standards-first-surface-ir.md): adapters should reuse mature platform protocols and translate them into the internal Surface IR rather than inventing a new automation transport.
+
 Viewportable should verify rendered interfaces, not HTML specifically.
 
 The engine therefore treats platform integration as an adapter problem:
