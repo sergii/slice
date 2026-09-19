@@ -109,15 +109,14 @@ export function midpoint(range) {
   return Math.floor((range.min + range.max) / 2);
 }
 
-export function widthsForPage(failures) {
+export function widthsForPage(failures, additionalReports = []) {
   const widths = new Set(STANDARD_WIDTHS);
+  const reports = [...failures.flatMap((failure) => failure.reports), ...additionalReports];
 
-  for (const failure of failures) {
-    for (const report of failure.reports) {
-      widths.add(report.range.min);
-      widths.add(midpoint(report.range));
-      widths.add(report.range.max);
-    }
+  for (const report of reports) {
+    widths.add(report.range.min);
+    widths.add(midpoint(report.range));
+    widths.add(report.range.max);
   }
 
   return [...widths].filter((width) => width >= 320 && width <= 1400).sort((a, b) => a - b);
