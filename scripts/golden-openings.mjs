@@ -1,25 +1,15 @@
 import { spawn } from 'node:child_process';
-import {
-  access,
-  copyFile,
-  mkdir,
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from 'node:fs/promises';
+import { access, copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const brokenRef =
-  process.env.OPENINGS_BROKEN_REF ?? '27bc8c0d6f4ee95f98c8638a2648b5bc278e18e2';
+const brokenRef = process.env.OPENINGS_BROKEN_REF ?? '27bc8c0d6f4ee95f98c8638a2648b5bc278e18e2';
 const fixedBaselineRef =
   process.env.OPENINGS_FIXED_BASELINE_REF ?? 'ba0d9445feca93ec3c533b644b2e5ae709af04bc';
 const widths =
-  process.env.OPENINGS_GOLDEN_WIDTHS ??
-  '320,375,390,430,767,768,819,820,1024,1280,1440';
+  process.env.OPENINGS_GOLDEN_WIDTHS ?? '320,375,390,430,767,768,819,820,1024,1280,1440';
 const harnessPort = process.env.OPENINGS_GOLDEN_PORT ?? '4179';
 const goldenRoot = path.join(root, '.slice', 'golden', 'openings');
 
@@ -95,9 +85,7 @@ async function resolveOpeningsRepo() {
     if (await isOpeningsRepo(candidate)) return candidate;
   }
 
-  throw new Error(
-    'Openings repo not found. Set OPENINGS_REPO=/absolute/path/to/sergii/openings.',
-  );
+  throw new Error('Openings repo not found. Set OPENINGS_REPO=/absolute/path/to/sergii/openings.');
 }
 
 async function readReport(reportPath) {
@@ -166,7 +154,9 @@ function assertFixedGolden(report) {
   }
 
   if (report.boundaries.length !== 0 || report.rootCauses.length !== 0) {
-    throw new Error('Current Openings is clean by viewport status but still reports active boundaries/root causes.');
+    throw new Error(
+      'Current Openings is clean by viewport status but still reports active boundaries/root causes.',
+    );
   }
 }
 
@@ -320,7 +310,9 @@ try {
   const fixedOneDir = path.join(goldenRoot, 'fixed-1');
   const fixedOneCode = await runOpeningsTrial(openingsRepo, fixedOneDir);
   if (fixedOneCode !== 0) {
-    throw new Error(`Current Openings fixed run #1 returned exit code ${fixedOneCode}; expected 0.`);
+    throw new Error(
+      `Current Openings fixed run #1 returned exit code ${fixedOneCode}; expected 0.`,
+    );
   }
   const fixedOne = await readReport(path.join(fixedOneDir, 'results.json'));
   assertFixedGolden(fixedOne);
@@ -329,7 +321,9 @@ try {
   const fixedTwoDir = path.join(goldenRoot, 'fixed-2');
   const fixedTwoCode = await runOpeningsTrial(openingsRepo, fixedTwoDir);
   if (fixedTwoCode !== 0) {
-    throw new Error(`Current Openings fixed run #2 returned exit code ${fixedTwoCode}; expected 0.`);
+    throw new Error(
+      `Current Openings fixed run #2 returned exit code ${fixedTwoCode}; expected 0.`,
+    );
   }
   const fixedTwo = await readReport(path.join(fixedTwoDir, 'results.json'));
   assertFixedGolden(fixedTwo);
