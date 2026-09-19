@@ -27,6 +27,60 @@ There is no single standard that normalizes rendered UI geometry, relationships,
 
 That missing layer is where Viewportable should innovate.
 
+## Decision drivers
+
+- avoid proprietary transport where mature standards already exist;
+- keep the public compatibility surface small;
+- preserve freedom to evolve layout representation and algorithms;
+- support web and future native adapters without a DOM-shaped public API;
+- keep expensive evidence optional;
+- keep deterministic analysis and explanation as the product-specific core.
+
+## Considered options
+
+### Option A - Public universal SurfaceSnapshot protocol
+
+Expose a Viewportable-specific normalized tree as the main public API.
+
+Pros:
+- simple conceptual model;
+- direct access to engine inputs.
+
+Cons:
+- freezes the least-understood part of the system too early;
+- makes every platform fit our invented schema;
+- couples callers to internal analysis needs;
+- duplicates surrounding standards.
+
+### Option B - No normalized IR
+
+Let every detector consume CDP, Playwright, Appium, or platform-native structures directly.
+
+Pros:
+- minimal initial abstraction.
+
+Cons:
+- detector logic becomes platform-coupled;
+- repeated capture/normalization logic;
+- difficult cross-platform analysis;
+- poor separation between evidence acquisition and interpretation.
+
+### Option C - Standards-first boundaries with an internal Surface IR
+
+Reuse mature protocols externally and normalize only inside the engine.
+
+Pros:
+- preserves evolvability;
+- keeps platform adapters replaceable;
+- enables shared analysis where semantics genuinely overlap;
+- avoids inventing transport and ecosystem protocols.
+
+Cons:
+- requires explicit normalization work;
+- internal IR still needs careful design and benchmarking.
+
+**Chosen: Option C.**
+
 ## Decision
 
 Viewportable will use a **standards-first architecture**.
