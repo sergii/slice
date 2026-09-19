@@ -265,4 +265,13 @@ Existing standards should be used at system boundaries where they fit:
 - MCP for agent tool exposure;
 - SARIF for analysis-result interchange.
 
-The draft public semantic contract is documented in [contracts/SCAN_CONTRACT.md](contracts/SCAN_CONTRACT.md).
+The proposed public semantic contract is documented in [RFC-0001](rfcs/0001-scan-contract.md).
+
+
+## Architecture quality and risk references
+
+Architecture trade-offs should be evaluated against [Quality Attributes](QUALITY_ATTRIBUTES.md).
+
+Known architectural risks and technical debt are tracked separately in [Risks and Technical Debt](RISKS.md), so the Design Backlog does not become a risk register.
+
+Shared terminology is defined in [Glossary](GLOSSARY.md).
