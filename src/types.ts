@@ -105,6 +105,7 @@ export interface ViewportResult {
   height: number;
   status: 'pass' | 'fail';
   issues: Issue[];
+  suppressedIssues: Issue[];
 }
 
 export interface BoundaryResult {
@@ -170,6 +171,7 @@ export interface SliceResults {
     passed: number;
     failed: number;
     totalIssues: number;
+    suppressedIssues: number;
     rootCauseGroups: number;
     durationMs: number;
   };
