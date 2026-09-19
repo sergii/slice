@@ -239,3 +239,30 @@ The core architectural requirement is therefore:
 The first implementation of the modular engine introduces a small `SurfaceSnapshot` contract between capture and detection. Browser layout nodes remain richer than the minimum surface node, but generic geometry work should increasingly depend on the minimum normalized fields rather than browser DOM details.
 
 Platform-specific adapters are documented in [PLATFORM_ADAPTERS.md](PLATFORM_ADAPTERS.md). The immediate goal is not React Native support itself. The goal is to make browser evolution avoid assumptions that would make a future React Native or Capacitor adapter unnecessarily expensive.
+
+
+## Standards-first boundary model
+
+The engine architecture is governed by [ADR-0001](adr/0001-standards-first-surface-ir.md).
+
+The key distinction is:
+
+```text
+public semantics:
+ScanRequest -> ScanResult / Finding
+
+internal implementation:
+platform adapter -> Surface IR -> analyzers -> evidence fusion
+```
+
+`SurfaceSnapshot` is an internal IR, not a public protocol. It may evolve or be replaced without forcing external callers to change.
+
+Existing standards should be used at system boundaries where they fit:
+
+- WebDriver / WebDriver BiDi and Playwright for browser automation;
+- CDP for rich Chromium capture;
+- Appium and platform-native automation/accessibility APIs for native capture;
+- MCP for agent tool exposure;
+- SARIF for analysis-result interchange.
+
+The draft public semantic contract is documented in [contracts/SCAN_CONTRACT.md](contracts/SCAN_CONTRACT.md).
