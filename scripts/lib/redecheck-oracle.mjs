@@ -193,7 +193,6 @@ export function classifyFailure(failure, pageRun) {
   };
 }
 
-
 function parseReportSection(markdown, startHeading, endHeading, classification) {
   const start = markdown.indexOf(startHeading);
   const end = endHeading ? markdown.indexOf(endHeading, start + 1) : markdown.length;
