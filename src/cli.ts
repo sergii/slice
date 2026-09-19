@@ -115,11 +115,7 @@ function optionFromConfig<T>(
   return command.getOptionValueSource(name) === 'cli' ? cliValue : (configValue ?? cliValue);
 }
 
-function resolveRunOptions(
-  command: Command,
-  options: CliOptions,
-  config: SliceConfig,
-): RunOptions {
+function resolveRunOptions(command: Command, options: CliOptions, config: SliceConfig): RunOptions {
   return {
     ...options,
     widths: optionFromConfig(command, 'widths', options.widths, config.widths?.join(',')),
@@ -333,10 +329,7 @@ function renderTable(
   }
 
   const failures = viewports.filter((viewport) => viewport.status === 'fail').length;
-  const suppressed = viewports.reduce(
-    (sum, viewport) => sum + viewport.suppressedIssues.length,
-    0,
-  );
+  const suppressed = viewports.reduce((sum, viewport) => sum + viewport.suppressedIssues.length, 0);
   const suppressedText = suppressed > 0 ? ` | ${suppressed} suppressed` : '';
   process.stdout.write(
     `\n  ${failures} failures in ${viewports.length} viewports | ` +
