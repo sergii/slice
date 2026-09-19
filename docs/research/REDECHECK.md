@@ -230,6 +230,62 @@ The 2020 paper reports that the RLG-comparison approach detected more injected c
 
 We should treat these numbers as results of that experiment, not as current product-comparison claims.
 
+## Accepted Slice baseline
+
+The first benchmark baseline is now established against the pinned 2017 corpus and manually classified results archive.
+
+The important distinction is between **automatic candidate matches** and **manually reviewed detections**.
+
+Baseline:
+
+```text
+33 distinct RLFs
+26 / 26 pages scanned
+504 sampled viewport renders
+
+9 automatic candidate matches
+5 reviewed confirmed detections
+4 reviewed incidental candidates
+
+10 misses in nominally compatible/partial families
+14 unsupported distinct RLFs
+
+131 anti-oracle raw reports
+22 negative candidates
+25 clean comparable reports
+36 unsupported anti-oracle reports
+
+8,838 raw Slice issues
+96.4s aggregate Slice scan time
+```
+
+The five confirmed detections are:
+
+- RLF 12 - 3-Minute-Journal graph protrusion at narrow widths;
+- RLF 13 - 3-Minute-Journal graph protrusion at the wider failure range;
+- RLF 14 - BugMeNot right-side form-field protrusion;
+- RLF 15 - BugMeNot left-side form-field protrusion;
+- RLF 21 - Pdf-Escape PCWorld logo protrusion.
+
+The four automatic matches rejected as incidental are:
+
+- RLF 16 - Consumer-Reports Featured Products failure, while Slice matched mobile-header elements;
+- RLF 17 - Consumer-Reports footer Privacy Policy failure, while Slice matched mobile-header elements;
+- RLF 18 - Consumer-Reports Price Watch / Featured tiles failure, while Slice matched mobile-header elements;
+- RLF 19 - Duolingo carousel arrow failure, while Slice matched cloned language label/flag elements.
+
+This establishes an important benchmark rule:
+
+> Page + viewport range + detector family is sufficient for a candidate queue, but not for a confirmed detection. Subject/evidence identity must agree with the oracle.
+
+The reviewed overlay is stored in `benchmark/redecheck/review.json`.
+
+### Immediate implication
+
+The first benchmark-driven precision improvement should not add a new detector. It should reduce geometry-only noise while preserving the five reviewed confirmed detections.
+
+A follow-up experiment showed that repairing layout ancestry across non-layout DOM nodes can substantially reduce raw issue volume and anti-oracle candidates. That change is evaluated separately in PR #13 so the baseline remains stable.
+
 ## Initial mapping to Slice
 
 | ReDeCheck concept | Slice today | Research direction |
@@ -291,14 +347,14 @@ Do not implement the full graph until benchmarks show which relationships materi
 
 ## Research plan
 
-### R1 - Reproduce the corpus
+### R1 - Reproduce the corpus - complete
 
 - clone/archive the 2017 example corpus for local benchmark use;
 - identify the 33 documented failures and their expected width ranges;
 - confirm how many still render deterministically in current Chromium;
 - record failures that depend on obsolete browser behavior/assets.
 
-### R2 - Establish a Slice baseline
+### R2 - Establish a Slice baseline - complete
 
 Run current Slice against every usable corpus page and classify:
 
