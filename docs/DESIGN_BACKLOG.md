@@ -68,9 +68,12 @@ Moving an item here means "remember and revisit with evidence", not "build next"
 
 ### SARIF reporter
 
-- Status: candidate
-- Evaluate mapping canonical Viewportable findings to SARIF rule IDs, locations, fingerprints, and custom properties.
-- Keep Viewportable JSON as the richer source format if SARIF cannot express all render-state evidence.
+- Status: research-needed
+- SARIF itself can represent results without source locations, but GitHub Code Scanning requires at least one location to display an alert.
+- Use SARIF for findings with trustworthy source attribution.
+- Keep GitHub Checks / Viewportable JSON / MCP as the natural path for runtime-only UI findings.
+- Never fabricate source locations merely to satisfy Code Scanning.
+- Research: `docs/research/SARIF_RUNTIME_UI.md`.
 
 ### MCP server
 
