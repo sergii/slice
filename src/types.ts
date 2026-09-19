@@ -1,6 +1,6 @@
 import type { SurfaceNode, SurfaceRect, SurfaceViewport } from './surface.js';
 
-export interface Rect extends SurfaceRect {}
+export type Rect = SurfaceRect;
 
 export interface LayoutNode extends SurfaceNode {
   tagName: string;
@@ -11,7 +11,7 @@ export interface LayoutNode extends SurfaceNode {
   nthChild?: number;
 }
 
-export interface Viewport extends SurfaceViewport {}
+export type Viewport = SurfaceViewport;
 
 export interface HorizontalOverflowEvidence {
   documentScrollWidth: number;
