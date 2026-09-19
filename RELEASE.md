@@ -25,21 +25,49 @@
 - [x] Final npm package identity: `@viewportable/slice`.
 - [x] CLI executable identity remains `slice`.
 - [x] Accidental publication blocked with `"private": true`.
-- [ ] Confirm npm `@viewportable` scope permissions.
-- [ ] Remove `"private": true` only for an explicitly approved publish.
-- [ ] Final npm pack validation after publication safety is removed.
+- [x] Package tarball can be built with `npm pack` while publication remains blocked.
+- [ ] Confirm npm `@viewportable` scope permissions before any future npm publication.
+- [ ] Remove `"private": true` only for an explicitly approved npm publish.
+
+## Release engineering
+
+- [x] `npm run validate:release` checks package identity, license, Action runtime files, and publication safety.
+- [x] Tagged validation requires the tag to equal `v<package.version>`.
+- [x] Tagged validation rejects `viewportable/slice@main` in release-facing Action docs.
+- [x] `npm run preflight:rc` composes repository, browser, demo, release-layout, and Openings golden gates.
+- [x] Tag-driven GitHub Release workflow verifies the tag commit is on `main`.
+- [x] Tag-driven workflow reruns browser and composite-Action smoke checks.
+- [x] Tag-driven workflow creates a `.tgz` inspection artifact.
+- [x] Tag-driven workflow creates a GitHub prerelease for prerelease tags.
+- [x] Release workflow contains no npm publish step.
 
 ## Acceptance
 
 - [x] Golden harness prepared around historical broken ref `27bc8c0d...`.
-- [ ] Openings broken-state golden run.
-- [ ] Exact 768px occlusion transition confirmed on Openings.
-- [ ] Openings fixed-state clean run.
-- [ ] Consecutive-run determinism confirmed.
+- [ ] Run `npm run preflight:rc` locally.
+- [ ] Openings broken-state golden run passes.
+- [ ] Exact historical mismatch window is confirmed: clean at 767px, occluded 768-819px, clean at 820px.
+- [ ] Openings fixed-state clean run passes.
+- [ ] Consecutive-run determinism passes.
 
-## Release
+## First release candidate
 
-- [ ] CI green on release commit.
-- [ ] Changelog date finalized.
-- [ ] GitHub release notes prepared.
+After all Acceptance items are green:
+
+- [ ] Set package version to `0.1.0-rc.1` with `npm version 0.1.0-rc.1 --no-git-tag-version`.
+- [ ] Finalize the changelog date/content.
+- [ ] Replace release-facing `viewportable/slice@main` examples with `viewportable/slice@v0.1.0-rc.1`.
+- [ ] Run `npm run validate:release -- v0.1.0-rc.1`.
+- [ ] Commit the RC preparation to `main`.
+- [ ] Confirm CI is green on that release commit.
+- [ ] Tag that exact commit `v0.1.0-rc.1`.
+- [ ] Push the tag and verify the GitHub prerelease is created successfully.
+
+## Stable v0.1.0
+
+Do not create the stable tag until the RC has been exercised externally or otherwise accepted.
+
+- [ ] Set package version to `0.1.0`.
+- [ ] Update immutable Action examples to `viewportable/slice@v0.1.0`.
+- [ ] Run `npm run validate:release -- v0.1.0`.
 - [ ] Tag `v0.1.0`.
