@@ -188,14 +188,16 @@ severity
 message
 renderState
 subjects
+renderedLocation
 evidence
+sourceAttribution?
 range
 fingerprint
 reproduction
 verification
 ```
 
-Not every rule needs every field.
+Not every rule needs every field. `renderedLocation` is intrinsic to Viewportable; `sourceAttribution` is optional and must only be emitted when it is trustworthy.
 
 ## Finding identity
 
