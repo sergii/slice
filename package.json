@@ -2,6 +2,15 @@
   "name": "slice",
   "version": "0.1.0",
   "description": "Deterministic responsive QA for coding agents",
+  "homepage": "https://github.com/viewportable/slice#readme",
+  "bugs": {
+    "url": "https://github.com/viewportable/slice/issues"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/viewportable/slice.git"
+  },
   "bin": {
     "slice": "./dist/cli.mjs"
   },
