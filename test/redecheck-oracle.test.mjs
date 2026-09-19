@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  classifyFailure,
-  parseOracle,
-  widthsForPage,
-} from '../scripts/lib/redecheck-oracle.mjs';
+import { classifyFailure, parseOracle, widthsForPage } from '../scripts/lib/redecheck-oracle.mjs';
 
 const archive = `### True Positives### {#TP}
 
