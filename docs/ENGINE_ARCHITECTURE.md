@@ -232,3 +232,10 @@ not a rewrite of the scan pipeline.
 The core architectural requirement is therefore:
 
 > Viewportable should become more capable by composition, while the cheapest useful scan stays cheap.
+
+
+## Platform-neutral surface boundary
+
+The first implementation of the modular engine introduces a small `SurfaceSnapshot` contract between capture and detection. Browser layout nodes remain richer than the minimum surface node, but generic geometry work should increasingly depend on the minimum normalized fields rather than browser DOM details.
+
+Platform-specific adapters are documented in [PLATFORM_ADAPTERS.md](PLATFORM_ADAPTERS.md). The immediate goal is not React Native support itself. The goal is to make browser evolution avoid assumptions that would make a future React Native or Capacitor adapter unnecessarily expensive.
