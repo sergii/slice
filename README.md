@@ -61,7 +61,7 @@ npx slice http://localhost:3000
 The first demo is intentionally framework-neutral. Slice consumes a URL, so a static page exercises the same browser/CDP path as Rails, React, or Next.js without adding another framework to debug.
 
 ```bash
-git clone https://github.com/sergii/slice.git
+git clone https://github.com/viewportable/slice.git
 cd slice
 npm ci
 npm run demo
