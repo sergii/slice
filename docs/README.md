@@ -41,13 +41,14 @@ Current:
 - [Protocol and interchange survey](research/PROTOCOLS_AND_INTERCHANGE.md)
 - [SARIF and runtime UI findings](research/SARIF_RUNTIME_UI.md)
 
-### Public contract drafts - `docs/contracts/`
+### RFCs - `docs/rfcs/`
 
-These describe semantic contracts we are exploring for external callers without freezing a public wire format.
+RFCs are proposals for major or cross-cutting changes before they become accepted design.
 
 Current:
 
-- [Scan Contract Draft](contracts/SCAN_CONTRACT.md)
+- [RFC process](rfcs/README.md)
+- [RFC-0001: Scan Contract](rfcs/0001-scan-contract.md)
 
 ### Architecture guides
 
@@ -55,6 +56,9 @@ These describe the architecture that contributors should currently build against
 
 - [Engine Architecture](ENGINE_ARCHITECTURE.md)
 - [Platform Adapters](PLATFORM_ADAPTERS.md)
+- [Quality Attributes](QUALITY_ATTRIBUTES.md)
+- [Risks and Technical Debt](RISKS.md)
+- [Glossary](GLOSSARY.md)
 
 If a guide and an accepted ADR conflict, the ADR explains the decision and the guide should be updated.
 
@@ -108,6 +112,7 @@ Then put it in:
 
 ```text
 evidence   -> Research
+proposal   -> RFC
 decision   -> ADR
 commitment -> Roadmap
 idea       -> Design Backlog
