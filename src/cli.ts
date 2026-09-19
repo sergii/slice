@@ -701,9 +701,9 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
 
         const currentIssueIds = new Set(current.issues.map((issue) => issue.id));
         const nextIssueIds = new Set(next.issues.map((issue) => issue.id));
-        const transitionIssueIds = [
-          ...new Set([...currentIssueIds, ...nextIssueIds]),
-        ].filter((issueId) => currentIssueIds.has(issueId) !== nextIssueIds.has(issueId));
+        const transitionIssueIds = [...new Set([...currentIssueIds, ...nextIssueIds])].filter(
+          (issueId) => currentIssueIds.has(issueId) !== nextIssueIds.has(issueId),
+        );
 
         for (const issueId of transitionIssueIds) {
           const issue =
