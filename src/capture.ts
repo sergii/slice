@@ -136,11 +136,7 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
 
   return result.map((node) => ({
     ...node,
-    parentIndex: nearestCapturedParentIndex(
-      node.parentIndex,
-      capturedIndices,
-      nodes.parentIndex,
-    ),
+    parentIndex: nearestCapturedParentIndex(node.parentIndex, capturedIndices, nodes.parentIndex),
   }));
 }
 
