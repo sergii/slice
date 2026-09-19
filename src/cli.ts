@@ -8,7 +8,7 @@ import { captureLayout } from './capture.js';
 import { findUniqueCssSource } from './css-source.js';
 import { detectFixedElementCollisions } from './detect/fixed-collision.js';
 import { detectFixedContentOcclusions } from './detect/fixed-occlusion.js';
-import { detectHorizontalOverflow, OVERFLOW_TOLERANCE_PX } from './detect/overflow.js';
+import { detectHorizontalOverflow } from './detect/overflow.js';
 import { diagnoseHorizontalOverflowRoot } from './diagnose.js';
 import { groupHorizontalOverflow } from './grouping.js';
 import { writeResults } from './report.js';
@@ -261,7 +261,7 @@ function renderTable(
       const low = Math.min(boundary.rangeStart, boundary.rangeEnd);
       const high = Math.max(boundary.rangeStart, boundary.rangeEnd);
       process.stdout.write(
-        `    ${result.issueId}  breaks at ${result.boundary}px  ` +
+        `    ${result.issueId}  ${result.issueType} | breaks at ${result.boundary}px  ` +
           `(${result.probesUsed} probes, range ${low}-${high})\n`,
       );
     }
@@ -675,57 +675,64 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     const boundaryDisplays: BoundaryDisplay[] = [];
 
     if (options.boundary) {
-      for (let index = 0; index < viewports.length - 1; index += 1) {
-        const current = viewports[index];
-        const next = viewports[index + 1];
-        if (!current || !next) continue;
+      const boundaryCaptureCache = new Map<number, CaptureResult>();
+      const rootCauseWidthsRecorded = new Set(widths);
 
-        const currentHasOverflow = current.issues.some(
-          (issue) => issue.type === 'horizontal-overflow',
-        );
-        const nextHasOverflow = next.issues.some((issue) => issue.type === 'horizontal-overflow');
-        if (currentHasOverflow === nextHasOverflow) continue;
+      const captureBoundaryWidth = async (width: number): Promise<CaptureResult> => {
+        const cached = boundaryCaptureCache.get(width);
+        if (cached) return cached;
 
-        const passWidth = currentHasOverflow ? next.width : current.width;
-        const failWidth = currentHasOverflow ? current.width : next.width;
-
-        const search = await findBoundary(
-          async (width) => {
-            await stabilizeViewport(runtime.page, width, height, waitMs);
-            const metrics = await getDocumentMetrics(runtime.page);
-            return metrics.scrollWidth - metrics.clientWidth > OVERFLOW_TOLERANCE_PX;
-          },
-          passWidth,
-          failWidth,
-        );
-
-        const capturedAtBoundary = await captureAtWidth(
-          search.firstBadWidth,
+        const captured = await captureAtWidth(
+          width,
           height,
           waitMs,
           runtime,
           issueIds,
           rootCauseIds,
         );
-        rootCauseObservations.push(...capturedAtBoundary.rootCauses);
+        boundaryCaptureCache.set(width, captured);
+        return captured;
+      };
 
-        const fallbackIssues = (currentHasOverflow ? current.issues : next.issues).filter(
-          (issue): issue is HorizontalOverflowIssue => issue.type === 'horizontal-overflow',
-        );
-        const capturedOverflowIssues = capturedAtBoundary.issues.filter(
-          (issue): issue is HorizontalOverflowIssue => issue.type === 'horizontal-overflow',
-        );
-        const issueIdsAtBoundary = [
-          ...new Set(
-            (capturedOverflowIssues.length > 0 ? capturedOverflowIssues : fallbackIssues).map(
-              (issue) => issue.id,
-            ),
-          ),
-        ];
+      for (let index = 0; index < viewports.length - 1; index += 1) {
+        const current = viewports[index];
+        const next = viewports[index + 1];
+        if (!current || !next) continue;
 
-        for (const issueId of issueIdsAtBoundary) {
+        const currentIssueIds = new Set(current.issues.map((issue) => issue.id));
+        const nextIssueIds = new Set(next.issues.map((issue) => issue.id));
+        const transitionIssueIds = [
+          ...new Set([...currentIssueIds, ...nextIssueIds]),
+        ].filter((issueId) => currentIssueIds.has(issueId) !== nextIssueIds.has(issueId));
+
+        for (const issueId of transitionIssueIds) {
+          const issue =
+            current.issues.find((candidate) => candidate.id === issueId) ??
+            next.issues.find((candidate) => candidate.id === issueId);
+          if (!issue) continue;
+
+          const currentBroken = currentIssueIds.has(issueId);
+          const passWidth = currentBroken ? next.width : current.width;
+          const failWidth = currentBroken ? current.width : next.width;
+
+          const search = await findBoundary(
+            async (width) => {
+              const captured = await captureBoundaryWidth(width);
+              return captured.issues.some((candidate) => candidate.id === issueId);
+            },
+            passWidth,
+            failWidth,
+          );
+
+          const capturedAtBoundary = await captureBoundaryWidth(search.firstBadWidth);
+          if (!rootCauseWidthsRecorded.has(search.firstBadWidth)) {
+            rootCauseObservations.push(...capturedAtBoundary.rootCauses);
+            rootCauseWidthsRecorded.add(search.firstBadWidth);
+          }
+
           const result: BoundaryResult = {
             issueId,
+            issueType: issue.type,
             boundary: search.boundary,
             lastGoodWidth: search.lastGoodWidth,
             firstBadWidth: search.firstBadWidth,
