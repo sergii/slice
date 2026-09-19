@@ -19,6 +19,7 @@ const cacheRoot = path.join(repoRoot, '.cache', 'redecheck');
 const pagesDir = path.join(cacheRoot, 'pages');
 const archivePath = path.join(cacheRoot, 'results-archive.md');
 const sourcesPath = path.join(repoRoot, 'benchmark', 'redecheck', 'sources.json');
+const reviewPath = path.join(repoRoot, 'benchmark', 'redecheck', 'review.json');
 const outputRoot = path.join(repoRoot, '.slice', 'benchmarks', 'redecheck');
 const pageOutputRoot = path.join(outputRoot, 'pages');
 const cliPath = path.join(repoRoot, 'dist', 'cli.mjs');
@@ -172,6 +173,9 @@ function renderSummary(report) {
     '',
     `- Oracle distinct RLFs: **${report.summary.oracleFailures}**`,
     `- Candidate matches: **${report.summary.candidateMatches}**`,
+    `- Reviewed confirmed detections: **${report.summary.confirmedDetections}**`,
+    `- Reviewed incidental candidates: **${report.summary.rejectedIncidental}**`,
+    `- Unreviewed candidate matches: **${report.summary.unreviewedCandidates}**`,
     `- Missed within currently compatible rule families: **${report.summary.missed}**`,
     `- Unsupported by current detector families: **${report.summary.unsupported}**`,
     `- Environment errors: **${report.summary.environmentErrors}**`,
@@ -233,8 +237,8 @@ function renderSummary(report) {
     '',
     '## Distinct RLFs',
     '',
-    '| ID | Page | Oracle report(s) | Support | Baseline | Candidate evidence |',
-    '| ---: | --- | --- | --- | --- | --- |',
+    '| ID | Page | Oracle report(s) | Support | Baseline | Review | Candidate evidence |',
+    '| ---: | --- | --- | --- | --- | --- | --- |',
   );
 
   for (const failure of report.failures) {
@@ -266,8 +270,11 @@ function renderSummary(report) {
             })
             .join('<br>');
 
+    const reviewStatus =
+      failure.classification === 'candidate-match' ? failure.review.status : '';
+
     lines.push(
-      `| ${failure.id} | ${failure.page} | ${oracleReports} | ${failure.support} | **${failure.classification}** | ${evidence} |`,
+      `| ${failure.id} | ${failure.page} | ${oracleReports} | ${failure.support} | **${failure.classification}** | ${reviewStatus} | ${evidence} |`,
     );
   }
 
@@ -278,6 +285,7 @@ function renderSummary(report) {
     '- `unsupported` identifies real capability gaps and is not counted as a miss.',
     '- `missed` means the current engine has a nominally compatible rule family but found no compatible issue at sampled widths inside the known failure range.',
     '- `candidate-match` is deliberately weaker than confirmed detection until subject identity/evidence is reviewed.',
+    '- Reviewed candidates are marked `confirmed` or `rejected-incidental` in `benchmark/redecheck/review.json`.',
     '- `negative-candidate` is similarly a review queue, not an automatic false-positive verdict.',
     '- page-level raw results are preserved under `pages/` for follow-up review.',
     '',
@@ -305,6 +313,8 @@ await access(cliPath);
 await access(archivePath);
 
 const sources = JSON.parse(await readFile(sourcesPath, 'utf8'));
+const review = JSON.parse(await readFile(reviewPath, 'utf8'));
+const reviewById = new Map(review.reviews.map((entry) => [entry.id, entry]));
 const archive = await readFile(archivePath, 'utf8');
 const oracleFailures = parseOracle(archive);
 const antiOracleReports = parseAntiOracle(archive);
@@ -405,10 +415,29 @@ try {
   await new Promise((resolve) => server.close(resolve));
 }
 
-const scoredFailures = oracleFailures.map((failure) => ({
-  ...failure,
-  ...classifyFailure(failure, pageRuns.get(failure.page)),
-}));
+const scoredFailures = oracleFailures.map((failure) => {
+  const automatic = classifyFailure(failure, pageRuns.get(failure.page));
+  const reviewed = reviewById.get(failure.id);
+
+  let reviewedStatus = 'unreviewed';
+  if (automatic.classification === 'candidate-match' && reviewed) {
+    reviewedStatus = reviewed.status;
+  }
+
+  return {
+    ...failure,
+    ...automatic,
+    review: reviewed
+      ? {
+          status: reviewedStatus,
+          reason: reviewed.reason,
+        }
+      : {
+          status: reviewedStatus,
+          reason: null,
+        },
+  };
+});
 
 const scoredAntiOracle = antiOracleReports.map((antiReport) => ({
   ...antiReport,
@@ -483,6 +512,19 @@ const report = {
   summary: {
     oracleFailures: oracleFailures.length,
     candidateMatches: classifications['candidate-match'],
+    confirmedDetections: scoredFailures.filter(
+      (failure) =>
+        failure.classification === 'candidate-match' && failure.review.status === 'confirmed',
+    ).length,
+    rejectedIncidental: scoredFailures.filter(
+      (failure) =>
+        failure.classification === 'candidate-match' &&
+        failure.review.status === 'rejected-incidental',
+    ).length,
+    unreviewedCandidates: scoredFailures.filter(
+      (failure) =>
+        failure.classification === 'candidate-match' && failure.review.status === 'unreviewed',
+    ).length,
     missed: classifications.missed,
     unsupported: classifications.unsupported,
     environmentErrors: classifications['environment-error'],
