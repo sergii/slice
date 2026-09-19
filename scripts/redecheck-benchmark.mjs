@@ -259,7 +259,8 @@ function renderSummary(report) {
             .slice(0, 3)
             .map((match) => {
               const oracleTypes = match.oracleReportTypes.join('/');
-              return `${match.issueType}@${match.viewportWidth}px [${oracleTypes}] ${match.selector ?? ''}`.trim();
+              const side = match.side ? ` side=${match.side}` : '';
+              return `${match.issueType}@${match.viewportWidth}px [${oracleTypes}]${side} ${match.selector ?? ''}`.trim();
             })
             .join('<br>');
 
