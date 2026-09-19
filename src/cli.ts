@@ -610,13 +610,7 @@ async function captureAtWidth(
   await stabilizeViewport(runtime.page, width, height, waitMs);
   const metrics = await getDocumentMetrics(runtime.page);
   const surface = await captureBrowserSurface(runtime.cdp, { width, height });
-  const captured = await enrichIssues(
-    runtime.page,
-    surface,
-    metrics,
-    issueIds,
-    rootCauseIds,
-  );
+  const captured = await enrichIssues(runtime.page, surface, metrics, issueIds, rootCauseIds);
   const { issues, suppressedIssues } = partitionSuppressedIssues(captured.issues, suppressions);
   const activeIssueIds = new Set(issues.map((issue) => issue.id));
   const rootCauses = captured.rootCauses
