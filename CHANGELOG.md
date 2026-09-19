@@ -2,6 +2,15 @@
 
 All notable changes to Slice are documented here.
 
+## Unreleased
+
+### Added
+
+- Platform-neutral `SurfaceSnapshot` boundary between capture and detection.
+- Small composable detector contract with explicit capability requirements and pre-execution capability checks.
+- Browser detector modules for the existing overflow, fixed-collision, and fixed-occlusion rules without changing their finding semantics.
+- Architecture notes for future Capacitor and React Native surface adapters.
+
 ## 0.1.0-rc.1 - 2026-09-19
 
 ### Added
