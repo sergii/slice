@@ -37,7 +37,7 @@ has a strong rendered-surface location but may not have a trustworthy source-cod
 
 Inventing a fake code location would make the integration misleading.
 
-## Decision implication
+## Design implications
 
 SARIF should remain an **output adapter**, not the canonical Viewportable finding model.
 
@@ -71,7 +71,7 @@ Examples:
 
 In these cases SARIF can provide code-native alerts and stable code-scanning identity.
 
-## Guardrail
+## Research recommendation
 
 > Never manufacture a source-code location merely to satisfy GitHub Code Scanning.
 
