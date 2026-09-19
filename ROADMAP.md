@@ -125,3 +125,19 @@ The first post-v0.1 research sequence is:
 
 
 After the structural web model proves itself, run a deliberately small React Native adapter spike: normalize one simulator-rendered screen into `SurfaceSnapshot` and prove that an existing shared geometry detector can find a real layout defect without algorithm changes. Capacitor should reuse the browser path first because its UI remains WebView-based.
+
+
+## Documentation and contract architecture
+
+The architecture knowledge model is now explicit:
+
+- `docs/adr/` for accepted architectural decisions;
+- `docs/research/` for evidence and prior art;
+- `docs/contracts/` for semantic public-contract drafts;
+- `docs/DESIGN_BACKLOG.md` for valuable but uncommitted directions;
+- this roadmap for sequenced intended work;
+- `CHANGELOG.md` for implemented/shipped changes.
+
+ADR-0001 establishes a standards-first architecture: Viewportable reuses mature protocols at external boundaries, keeps Surface IR internal, and concentrates product-specific engineering in rendered-surface normalization and analysis.
+
+The contract work remains deliberately non-blocking. ReDeCheck benchmarking and the first new structural detector can continue while `ScanRequest` and canonical `Finding` semantics mature through additional callers.
