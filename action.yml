@@ -1,0 +1,107 @@
+name: Slice responsive QA
+description: Deterministic responsive QA with machine-readable evidence, job summary, and artifact upload
+author: Viewportable
+
+inputs:
+  url:
+    description: Page URL to scan
+    required: true
+  config:
+    description: Optional path to slice.config.json
+    required: false
+    default: ''
+  out:
+    description: Output directory for Slice artifacts
+    required: false
+    default: .slice
+  artifact-name:
+    description: GitHub Actions artifact name
+    required: false
+    default: slice-results
+  install-browser:
+    description: Install Playwright Chromium and OS dependencies
+    required: false
+    default: 'true'
+
+outputs:
+  exit_code:
+    description: Slice CLI exit code (0 clean, 1 findings, 2 scanner/setup failure)
+    value: ${{ steps.scan.outputs.exit_code }}
+  result_path:
+    description: Path to results.json
+    value: ${{ steps.scan.outputs.result_path }}
+  artifact_url:
+    description: URL of the uploaded Slice artifact when available
+    value: ${{ steps.artifact.outputs.artifact-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Use Node.js 24
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24'
+
+    - name: Prepare Slice
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        if [[ ! -d node_modules ]]; then
+          npm ci --ignore-scripts
+        fi
+        if [[ ! -f dist/cli.mjs ]]; then
+          npm run build
+        fi
+
+    - name: Install Chromium
+      if: ${{ inputs.install-browser == 'true' }}
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: npx playwright install --with-deps chromium
+
+    - name: Run Slice
+      id: scan
+      shell: bash
+      env:
+        SLICE_URL: ${{ inputs.url }}
+        SLICE_CONFIG: ${{ inputs.config }}
+        SLICE_OUT: ${{ inputs.out }}
+      run: |
+        args=("$SLICE_URL" "--out" "$SLICE_OUT")
+        if [[ -n "$SLICE_CONFIG" ]]; then
+          args+=("--config" "$SLICE_CONFIG")
+        fi
+
+        set +e
+        node "$GITHUB_ACTION_PATH/dist/cli.mjs" "${args[@]}"
+        code=$?
+        set -e
+
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+        echo "result_path=$SLICE_OUT/results.json" >> "$GITHUB_OUTPUT"
+
+    - name: Write job summary
+      if: ${{ always() }}
+      shell: bash
+      env:
+        SLICE_RESULT_PATH: ${{ inputs.out }}/results.json
+      run: node "$GITHUB_ACTION_PATH/scripts/github-summary.mjs" "$SLICE_RESULT_PATH"
+
+    - name: Upload Slice results
+      id: artifact
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.out }}/results.json
+        if-no-files-found: ignore
+        include-hidden-files: true
+
+    - name: Enforce Slice result
+      if: ${{ always() }}
+      shell: bash
+      env:
+        SLICE_EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
+      run: |
+        code="${SLICE_EXIT_CODE:-2}"
+        exit "$code"

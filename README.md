@@ -239,6 +239,53 @@ Slice reports a fixed element when it paints above and meaningfully covers a vis
 
 Occlusion issues are stored as `type: "fixed-content-occlusion"` with the occluder and target selectors, both bounding boxes, overlap area, target coverage percentage, z-index values, and DOMSnapshot paint-order evidence. Fixed-vs-fixed overlaps remain the responsibility of `fixed-element-collision`. Exact breakpoint search tracks each occlusion independently, even when unrelated findings exist at both sampled widths.
 
+## GitHub Action
+
+Slice can run as a composite GitHub Action using the same CLI and report schema as local development. The action writes a job summary, uploads the machine-readable report, and preserves the CLI exit semantics: `0` clean, `1` findings, `2` scanner/setup failure.
+
+```yaml
+name: Slice
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slice-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  responsive-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start application
+        run: |
+          npm ci
+          npm run start -- --host 127.0.0.1 > /tmp/app.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
+
+      - name: Responsive QA
+        uses: viewportable/slice@main
+        with:
+          url: http://127.0.0.1:3000
+          config: slice.config.json
+```
+
+The action uploads `.slice/results.json` as `slice-results` by default. Use the `out` and `artifact-name` inputs to change those values. Set `install-browser: 'false'` only when Playwright Chromium and its OS dependencies are already installed earlier in the job.
+
+The copy-ready workflow lives at `examples/github/slice.yml`. The repository CI also invokes `uses: ./` against the built-in fixed demo so the published Action surface is exercised end to end.
+
 ## Local modernization lab
 
 Use Node.js 24 for development. The repository includes a `.node-version` file so version managers can select it automatically.

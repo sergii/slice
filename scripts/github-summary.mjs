@@ -1,0 +1,107 @@
+import { appendFile, readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
+
+function cell(value) {
+  return String(value ?? '')
+    .replaceAll('|', '\\|')
+    .replace(/[\r\n]+/g, ' ')
+    .trim();
+}
+
+function issueText(issue) {
+  if (issue.type === 'horizontal-overflow') {
+    return `${issue.type}: ${issue.selector} (${issue.overflowPx}px ${issue.side})`;
+  }
+
+  if (issue.type === 'fixed-element-collision') {
+    return `${issue.type}: ${issue.selector} overlaps ${issue.otherSelector}`;
+  }
+
+  return `${issue.type}: ${issue.selector} covers ${issue.targetSelector} (${issue.targetCoveragePct}%)`;
+}
+
+export function renderGitHubSummary(results) {
+  const lines = ['## Slice', ''];
+  const summary = results.summary ?? {};
+  const failing = results.viewports?.filter((viewport) => viewport.status === 'fail') ?? [];
+  const suppressed = summary.suppressedIssues ?? 0;
+
+  lines.push(
+    `**${failing.length} failing viewports / ${summary.viewportsChecked ?? 0} checked**` +
+      (suppressed > 0 ? ` · ${suppressed} suppressed` : ''),
+    '',
+  );
+
+  lines.push('| Width | Status | Findings |', '| ---: | :---: | --- |');
+  for (const viewport of results.viewports ?? []) {
+    const findings =
+      viewport.issues?.length > 0
+        ? viewport.issues.map((issue) => cell(issueText(issue))).join('<br>')
+        : viewport.suppressedIssues?.length > 0
+          ? `${viewport.suppressedIssues.length} suppressed`
+          : 'Clean';
+
+    lines.push(`| ${viewport.width}px | ${viewport.status.toUpperCase()} | ${findings} |`);
+  }
+
+  if ((results.rootCauses?.length ?? 0) > 0) {
+    lines.push('', '### Root causes', '', '| Root | Boundary | Reason |', '| --- | ---: | --- |');
+
+    for (const rootCause of results.rootCauses) {
+      const boundaries = rootCause.boundaries?.map((boundary) => `${boundary.boundary}px`) ?? [];
+      const reason = rootCause.diagnosis
+        ? `${rootCause.diagnosis.property}: ${rootCause.diagnosis.value}`
+        : 'Grouped layout overflow';
+
+      lines.push(
+        `| ${cell(rootCause.selector)} | ${cell(boundaries.join(', ') || '-')} | ${cell(reason)} |`,
+      );
+    }
+  }
+
+  if ((results.boundaries?.length ?? 0) > 0) {
+    lines.push(
+      '',
+      '### Issue boundaries',
+      '',
+      '| Issue | Type | Breaks at |',
+      '| --- | --- | ---: |',
+    );
+
+    for (const boundary of results.boundaries) {
+      lines.push(
+        `| ${cell(boundary.issueId)} | ${cell(boundary.issueType)} | ${boundary.boundary}px |`,
+      );
+    }
+  }
+
+  lines.push('');
+  return `${lines.join('\n')}\n`;
+}
+
+async function main() {
+  const reportPath = process.argv[2];
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+
+  if (!summaryPath) return;
+
+  if (!reportPath) {
+    await appendFile(summaryPath, '## Slice\n\nNo report path was provided.\n');
+    return;
+  }
+
+  try {
+    const results = JSON.parse(await readFile(reportPath, 'utf8'));
+    await appendFile(summaryPath, renderGitHubSummary(results));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await appendFile(
+      summaryPath,
+      `## Slice\n\nSlice did not produce a readable report.\n\n${cell(message)}\n`,
+    );
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
+}
