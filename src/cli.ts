@@ -411,10 +411,19 @@ async function enrichIssues(
         measurement.diagnosis.value,
       );
 
-      diagnosis = {
-        ...measurement.diagnosis,
-        source,
-      };
+      if (measurement.diagnosis.kind === 'fixed-width-constraint') {
+        if (source) {
+          diagnosis = {
+            ...measurement.diagnosis,
+            source,
+          };
+        }
+      } else {
+        diagnosis = {
+          ...measurement.diagnosis,
+          source,
+        };
+      }
     }
 
     const captured: CapturedRootCause = {
