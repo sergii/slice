@@ -66,3 +66,31 @@ jobs:
 
       - name: Responsively visual demo harness
         run: npm run demo:responsively:check
+
+      - name: Start GitHub Action fixture server
+        run: |
+          node scripts/demo-server.mjs > /tmp/slice-action-server.log 2>&1 &
+          echo $! > /tmp/slice-action-server.pid
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/fixed.html >/dev/null; then
+              exit 0
+            fi
+            sleep 0.2
+          done
+          cat /tmp/slice-action-server.log
+          exit 1
+
+      - name: GitHub Action smoke
+        uses: ./
+        with:
+          url: http://127.0.0.1:4173/fixed.html
+          out: .slice/action-smoke
+          artifact-name: slice-action-smoke
+          install-browser: 'false'
+
+      - name: Stop GitHub Action fixture server
+        if: ${{ always() }}
+        run: |
+          if [[ -f /tmp/slice-action-server.pid ]]; then
+            kill "$(cat /tmp/slice-action-server.pid)" 2>/dev/null || true
+          fi
