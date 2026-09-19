@@ -60,7 +60,13 @@ export function renderGitHubSummary(results) {
   }
 
   if ((results.boundaries?.length ?? 0) > 0) {
-    lines.push('', '### Issue boundaries', '', '| Issue | Type | Breaks at |', '| --- | --- | ---: |');
+    lines.push(
+      '',
+      '### Issue boundaries',
+      '',
+      '| Issue | Type | Breaks at |',
+      '| --- | --- | ---: |',
+    );
 
     for (const boundary of results.boundaries) {
       lines.push(
