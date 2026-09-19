@@ -1,6 +1,6 @@
 {
   "name": "@viewportable/slice",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Deterministic responsive QA for coding agents",
   "homepage": "https://github.com/viewportable/slice#readme",
