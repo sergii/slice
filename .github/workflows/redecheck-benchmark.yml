@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - benchmark/redecheck-baseline
+      - experiment/document-overflow-gate-v2
     paths:
       - benchmark/redecheck/**
       - scripts/redecheck-prepare.mjs
