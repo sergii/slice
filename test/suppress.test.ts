@@ -38,13 +38,16 @@ describe('issue suppressions', () => {
   });
 
   it('keeps unmatched issues active and retains suppressed evidence', () => {
-    const result = partitionSuppressedIssues([collision], [
-      {
-        type: 'fixed-element-collision',
-        selector: 'button.alpha',
-        otherSelector: 'button.beta',
-      },
-    ]);
+    const result = partitionSuppressedIssues(
+      [collision],
+      [
+        {
+          type: 'fixed-element-collision',
+          selector: 'button.alpha',
+          otherSelector: 'button.beta',
+        },
+      ],
+    );
 
     expect(result.issues).toEqual([]);
     expect(result.suppressedIssues).toEqual([collision]);
