@@ -51,7 +51,7 @@ Further flex/grid and `white-space: nowrap` diagnosis rules are deferred until t
 
 Merged as `6b719cf`.
 
-## Phase 5 - Package and release hygiene - In progress
+## Phase 5 - Package and release hygiene - RC preparation complete
 
 Completed:
 
@@ -70,25 +70,30 @@ Completed:
 - Tag-driven GitHub Release workflow with full verification and a package inspection artifact.
 - npm publishing remains explicitly out of the RC workflow.
 
-Remaining before the first RC:
+Completed for the first RC:
 
-- Execute the local Golden Acceptance / `preflight:rc`.
-- Bump to `0.1.0-rc.1`, finalize release notes, and pin Action docs to the immutable RC tag.
-- Tag only after the release commit is green.
+- Local `preflight:rc` and Openings Golden Acceptance passed on 2026-09-19.
+- Package version bumped to `0.1.0-rc.1`.
+- Release-facing Action examples pinned to `viewportable/slice@v0.1.0-rc.1`.
+- RC changelog finalized.
+
+Remaining:
+
+- Merge the RC preparation commit after CI is green.
+- Validate the exact tag contract on the release commit.
+- Tag `v0.1.0-rc.1` only after the release commit is green.
 
 npm scope ownership/permissions are required only before a future npm publication, not for the GitHub RC.
 
-## Phase 6 - Real-project acceptance - Harness ready, execution remaining
+## Phase 6 - Real-project acceptance - Complete
 
-Run `npm run golden:openings` against the local current Openings checkout.
+Accepted on 2026-09-19 against Openings HEAD `d15848c681b4ce348b34a4ef5849ba5d1308d58a`.
 
-Required acceptance:
-
-- Previously filtered scrollable-content cases stay clean.
-- The known 768px fixed-content occlusion is detected in the broken state.
-- Per-issue boundary search reports its exact transition.
-- The fixed state returns clean for the same viewport/config set.
-- Two consecutive runs are identical apart from timestamp and duration.
+- Historical broken state reproduced the known fixed-content occlusion only from 768px through 819px.
+- Exact issue boundaries were reported at 768px and 819px.
+- Current Openings was clean across the full golden width matrix.
+- Two consecutive fixed-state reports were identical apart from `timestamp` and `summary.durationMs`.
+- Full `npm run preflight:rc` completed with `RC READY`.
 
 ## Deferred until after v0.1
 
