@@ -764,9 +764,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         const currentRootCauseIds = new Set(
           currentCapture.rootCauses.map((rootCause) => rootCause.id),
         );
-        const nextRootCauseIds = new Set(
-          nextCapture.rootCauses.map((rootCause) => rootCause.id),
-        );
+        const nextRootCauseIds = new Set(nextCapture.rootCauses.map((rootCause) => rootCause.id));
         const transitionRootCauseIds = [
           ...new Set([...currentRootCauseIds, ...nextRootCauseIds]),
         ].filter(
