@@ -1,0 +1,32 @@
+name: Slice
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: slice-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  responsive-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start application
+        run: |
+          npm ci
+          npm run build
+          npm run start -- --host 127.0.0.1 > /tmp/app.log 2>&1 &
+          npx wait-on http://127.0.0.1:3000
+
+      - name: Run Slice
+        uses: viewportable/slice@main
+        with:
+          url: http://127.0.0.1:3000
+          config: slice.config.json
