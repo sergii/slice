@@ -140,6 +140,10 @@ export type RootCauseDiagnosis =
       source: CssSourceReference;
     };
 
+export type RootCauseDiagnosisCandidate =
+  | Omit<Extract<RootCauseDiagnosis, { kind: 'min-width-constraint' }>, 'source'>
+  | Omit<Extract<RootCauseDiagnosis, { kind: 'fixed-width-constraint' }>, 'source'>;
+
 export interface RootCauseObservation {
   viewportWidth: number;
   overflowPx: number;
