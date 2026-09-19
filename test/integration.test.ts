@@ -162,6 +162,7 @@ describe('slice CLI', () => {
       [401, 'pass'],
     ]);
     expect(report.boundaries[0]).toMatchObject({
+      issueType: 'horizontal-overflow',
       boundary: 399,
       lastGoodWidth: 400,
       firstBadWidth: 399,
@@ -265,6 +266,62 @@ describe('slice CLI', () => {
     });
     expect(result.stdout).toContain('covers');
     expect(report.boundaries).toEqual([]);
+  });
+
+  it('finds a fixed-element collision boundary even when overflow exists at both sampled widths', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('overlap-boundaries.html', [
+      '--widths',
+      '390,500',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+
+    expect(report.viewports.every((viewport: { issues: Array<{ type: string }> }) =>
+      viewport.issues.some((issue) => issue.type === 'horizontal-overflow'),
+    )).toBe(true);
+
+    const collisionBoundary = report.boundaries.find(
+      (boundary: { issueType: string }) => boundary.issueType === 'fixed-element-collision',
+    );
+
+    expect(collisionBoundary).toMatchObject({
+      issueType: 'fixed-element-collision',
+      boundary: 438,
+      lastGoodWidth: 439,
+      firstBadWidth: 438,
+    });
+  });
+
+  it('finds the exact fixed-content occlusion breakpoint', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('occlusion-boundary.html', [
+      '--widths',
+      '700,820',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    const occlusionBoundary = report.boundaries.find(
+      (boundary: { issueType: string }) => boundary.issueType === 'fixed-content-occlusion',
+    );
+
+    expect(occlusionBoundary).toMatchObject({
+      issueType: 'fixed-content-occlusion',
+      boundary: 768,
+      lastGoodWidth: 769,
+      firstBadWidth: 768,
+    });
+    expect(result.stdout).toContain('fixed-content-occlusion | breaks at 768px');
   });
 
   it('is deterministic apart from timestamp and durationMs', async () => {
