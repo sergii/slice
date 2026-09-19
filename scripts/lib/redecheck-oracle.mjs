@@ -52,48 +52,51 @@ export function parseOracle(markdown, options = {}) {
     if (!idMatch || !rangeMatch) continue;
 
     const id = Number(idMatch[1]);
-    const range = {
-      min: Number(rangeMatch[1]),
-      max: Number(rangeMatch[2]),
+    const report = {
+      type,
+      range: {
+        min: Number(rangeMatch[1]),
+        max: Number(rangeMatch[2]),
+      },
+      report: reportMatch?.[1] ?? null,
+      reason: reasonCell || null,
     };
     const existing = failures.get(id);
 
     if (existing) {
-      if (existing.type !== type || existing.page !== page) {
+      if (existing.page !== page) {
         throw new Error(
-          `Distinct RLF ${id} changed identity: ${existing.type}/${existing.page} vs ${type}/${page}`,
+          `Distinct RLF ${id} changed page identity: ${existing.page} vs ${page}`,
         );
       }
 
-      if (
-        !existing.ranges.some(
-          (candidate) => candidate.min === range.min && candidate.max === range.max,
-        )
-      ) {
-        existing.ranges.push(range);
-      }
+      const duplicate = existing.reports.some(
+        (candidate) =>
+          candidate.type === report.type &&
+          candidate.range.min === report.range.min &&
+          candidate.range.max === report.range.max &&
+          candidate.report === report.report,
+      );
 
-      if (reportMatch && !existing.reports.includes(reportMatch[1])) {
-        existing.reports.push(reportMatch[1]);
-      }
-
-      if (reasonCell && !existing.reasons.includes(reasonCell)) {
-        existing.reasons.push(reasonCell);
+      if (!duplicate) {
+        existing.reports.push(report);
       }
       continue;
     }
 
     failures.set(id, {
       id,
-      type,
       page,
-      ranges: [range],
-      reports: reportMatch ? [reportMatch[1]] : [],
-      reasons: reasonCell ? [reasonCell] : [],
+      reports: [report],
     });
   }
 
-  const distinctFailures = [...failures.values()].sort((a, b) => a.id - b.id);
+  const distinctFailures = [...failures.values()]
+    .map((failure) => ({
+      ...failure,
+      reportTypes: [...new Set(failure.reports.map((report) => report.type))],
+    }))
+    .sort((a, b) => a.id - b.id);
 
   if (distinctFailures.length !== expectedDistinct) {
     throw new Error(
@@ -112,37 +115,52 @@ export function widthsForPage(failures) {
   const widths = new Set(STANDARD_WIDTHS);
 
   for (const failure of failures) {
-    for (const range of failure.ranges) {
-      widths.add(range.min);
-      widths.add(midpoint(range));
-      widths.add(range.max);
+    for (const report of failure.reports) {
+      widths.add(report.range.min);
+      widths.add(midpoint(report.range));
+      widths.add(report.range.max);
     }
   }
 
   return [...widths].filter((width) => width >= 320 && width <= 1400).sort((a, b) => a - b);
 }
 
-export function compatibleFindings(pageResult, failure) {
-  const mapping = CLASS_MAPPING[failure.type];
-  if (!mapping || mapping.issueTypes.length === 0) return [];
+export function supportForFailure(failure) {
+  const supports = failure.reportTypes
+    .map((type) => CLASS_MAPPING[type]?.support ?? 'unsupported')
+    .filter((support) => support !== 'unsupported');
 
-  const compatibleTypes = new Set(mapping.issueTypes);
+  if (supports.includes('compatible')) return 'compatible';
+  if (supports.includes('partial')) return 'partial';
+  return 'unsupported';
+}
+
+export function compatibleFindings(pageResult, failure) {
   const matches = [];
 
   for (const viewport of pageResult.viewports ?? []) {
-    const insideOracleRange = failure.ranges.some(
-      (range) => viewport.width >= range.min && viewport.width <= range.max,
-    );
-    if (!insideOracleRange) continue;
+    const applicableReports = failure.reports.filter((report) => {
+      const mapping = CLASS_MAPPING[report.type];
+      if (!mapping || mapping.issueTypes.length === 0) return false;
+
+      return viewport.width >= report.range.min && viewport.width <= report.range.max;
+    });
+
+    if (applicableReports.length === 0) continue;
 
     for (const issue of viewport.issues ?? []) {
-      if (!compatibleTypes.has(issue.type)) continue;
+      const matchedReportTypes = applicableReports
+        .filter((report) => CLASS_MAPPING[report.type].issueTypes.includes(issue.type))
+        .map((report) => report.type);
+
+      if (matchedReportTypes.length === 0) continue;
 
       matches.push({
         viewportWidth: viewport.width,
         issueId: issue.id,
         issueType: issue.type,
         selector: issue.selector,
+        oracleReportTypes: [...new Set(matchedReportTypes)],
       });
     }
   }
@@ -151,20 +169,20 @@ export function compatibleFindings(pageResult, failure) {
 }
 
 export function classifyFailure(failure, pageRun) {
-  const mapping = CLASS_MAPPING[failure.type];
+  const support = supportForFailure(failure);
 
   if (!pageRun || pageRun.status === 'environment-error') {
     return {
       classification: 'environment-error',
-      support: mapping?.support ?? 'unknown',
+      support,
       matches: [],
     };
   }
 
-  if (!mapping || mapping.support === 'unsupported') {
+  if (support === 'unsupported') {
     return {
       classification: 'unsupported',
-      support: mapping?.support ?? 'unsupported',
+      support,
       matches: [],
     };
   }
@@ -173,7 +191,7 @@ export function classifyFailure(failure, pageRun) {
 
   return {
     classification: matches.length > 0 ? 'candidate-match' : 'missed',
-    support: mapping.support,
+    support,
     matches,
   };
 }
