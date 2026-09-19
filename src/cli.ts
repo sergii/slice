@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { getDocumentMetrics, launchBrowser, type DocumentMetrics } from './browser.js';
 import { findBoundary } from './boundary.js';
 import { captureLayout } from './capture.js';
+import { loadSliceConfig, type SliceConfig, type SuppressionRule } from './config.js';
 import { findUniqueCssSource } from './css-source.js';
 import { detectFixedElementCollisions } from './detect/fixed-collision.js';
 import { detectFixedContentOcclusions } from './detect/fixed-occlusion.js';
@@ -14,6 +15,7 @@ import { groupHorizontalOverflow } from './grouping.js';
 import { writeResults } from './report.js';
 import { buildStableSelector, makePageUniquenessCheck } from './selector.js';
 import { installStabilization, stabilizeViewport } from './stabilize.js';
+import { partitionSuppressedIssues } from './suppress.js';
 import type {
   BoundaryResult,
   HorizontalOverflowIssue,
@@ -42,6 +44,11 @@ interface CliOptions {
   timeout: string;
   wait: string;
   readySelector?: string;
+  config?: string;
+}
+
+interface RunOptions extends CliOptions {
+  suppressions: SuppressionRule[];
 }
 
 interface BoundaryDisplay {
@@ -64,8 +71,11 @@ interface CapturedRootCause extends RootCauseObservation {
 
 interface CaptureResult {
   issues: Issue[];
+  suppressedIssues: Issue[];
   rootCauses: CapturedRootCause[];
 }
+
+type RawCaptureResult = Omit<CaptureResult, 'suppressedIssues'>;
 
 class SliceCliError extends Error {}
 
@@ -94,6 +104,53 @@ function parseWidths(value: string): number[] {
   }
 
   return [...new Set(widths)];
+}
+
+function optionFromConfig<T>(
+  command: Command,
+  name: string,
+  cliValue: T,
+  configValue: T | undefined,
+): T {
+  return command.getOptionValueSource(name) === 'cli' ? cliValue : (configValue ?? cliValue);
+}
+
+function resolveRunOptions(
+  command: Command,
+  options: CliOptions,
+  config: SliceConfig,
+): RunOptions {
+  return {
+    ...options,
+    widths: optionFromConfig(command, 'widths', options.widths, config.widths?.join(',')),
+    height: optionFromConfig(
+      command,
+      'height',
+      options.height,
+      config.height === undefined ? undefined : String(config.height),
+    ),
+    out: optionFromConfig(command, 'out', options.out, config.out),
+    boundary: optionFromConfig(command, 'boundary', options.boundary, config.boundary),
+    timeout: optionFromConfig(
+      command,
+      'timeout',
+      options.timeout,
+      config.timeout === undefined ? undefined : String(config.timeout),
+    ),
+    wait: optionFromConfig(
+      command,
+      'wait',
+      options.wait,
+      config.wait === undefined ? undefined : String(config.wait),
+    ),
+    readySelector: optionFromConfig(
+      command,
+      'readySelector',
+      options.readySelector,
+      config.readySelector,
+    ),
+    suppressions: config.ignore,
+  };
 }
 
 function truncate(value: string, maxLength: number): string {
@@ -135,7 +192,11 @@ function renderTable(
     const width = String(viewport.width).padEnd(6, ' ');
 
     if (viewport.status === 'pass') {
-      process.stdout.write(`  ${width}${colors.green('PASS')}\n`);
+      const suppressed =
+        viewport.suppressedIssues.length > 0
+          ? ` | ${viewport.suppressedIssues.length} suppressed`
+          : '';
+      process.stdout.write(`  ${width}${colors.green('PASS')}${suppressed}\n`);
       continue;
     }
 
@@ -272,9 +333,14 @@ function renderTable(
   }
 
   const failures = viewports.filter((viewport) => viewport.status === 'fail').length;
+  const suppressed = viewports.reduce(
+    (sum, viewport) => sum + viewport.suppressedIssues.length,
+    0,
+  );
+  const suppressedText = suppressed > 0 ? ` | ${suppressed} suppressed` : '';
   process.stdout.write(
     `\n  ${failures} failures in ${viewports.length} viewports | ` +
-      `${(durationMs / 1000).toFixed(1)}s\n`,
+      `${(durationMs / 1000).toFixed(1)}s${suppressedText}\n`,
   );
   process.stdout.write(`  ${outputPath}\n\n`);
 }
@@ -304,7 +370,7 @@ async function enrichIssues(
   metrics: DocumentMetrics,
   issueIds: Map<string, string>,
   rootCauseIds: Map<string, string>,
-): Promise<CaptureResult> {
+): Promise<RawCaptureResult> {
   const detected = detectHorizontalOverflow(nodes, {
     width: viewportWidth,
     height: viewportHeight,
@@ -548,11 +614,38 @@ async function captureAtWidth(
   runtime: Awaited<ReturnType<typeof launchBrowser>>,
   issueIds: Map<string, string>,
   rootCauseIds: Map<string, string>,
+  suppressions: SuppressionRule[],
 ): Promise<CaptureResult> {
   await stabilizeViewport(runtime.page, width, height, waitMs);
   const metrics = await getDocumentMetrics(runtime.page);
   const nodes = await captureLayout(runtime.cdp);
-  return enrichIssues(runtime.page, nodes, width, height, metrics, issueIds, rootCauseIds);
+  const captured = await enrichIssues(
+    runtime.page,
+    nodes,
+    width,
+    height,
+    metrics,
+    issueIds,
+    rootCauseIds,
+  );
+  const { issues, suppressedIssues } = partitionSuppressedIssues(captured.issues, suppressions);
+  const activeIssueIds = new Set(issues.map((issue) => issue.id));
+  const rootCauses = captured.rootCauses
+    .map((rootCause) => ({
+      ...rootCause,
+      issueIds: rootCause.issueIds.filter((issueId) => activeIssueIds.has(issueId)),
+    }))
+    .filter(
+      (rootCause) =>
+        rootCause.issueIds.length > 0 &&
+        (rootCause.issueIds.length >= 2 || rootCause.diagnosis !== undefined),
+    );
+
+  return {
+    issues,
+    suppressedIssues,
+    rootCauses,
+  };
 }
 
 function aggregateRootCauses(
@@ -635,7 +728,7 @@ function aggregateRootCauses(
   });
 }
 
-async function runSlice(url: string, options: CliOptions): Promise<number> {
+async function runSlice(url: string, options: RunOptions): Promise<number> {
   const widths = parseWidths(options.widths);
   const height = parsePositiveInteger(options.height, '--height');
   const timeout = parsePositiveInteger(options.timeout, '--timeout');
@@ -665,7 +758,15 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     }
 
     for (const width of widths) {
-      const captured = await captureAtWidth(width, height, waitMs, runtime, issueIds, rootCauseIds);
+      const captured = await captureAtWidth(
+        width,
+        height,
+        waitMs,
+        runtime,
+        issueIds,
+        rootCauseIds,
+        options.suppressions,
+      );
       sampleCaptures.set(width, captured);
       rootCauseObservations.push(...captured.rootCauses);
 
@@ -674,6 +775,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         height,
         status: captured.issues.length > 0 ? 'fail' : 'pass',
         issues: captured.issues,
+        suppressedIssues: captured.suppressedIssues,
       });
     }
 
@@ -696,6 +798,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
           runtime,
           issueIds,
           rootCauseIds,
+          options.suppressions,
         );
         boundaryCaptureCache.set(width, captured);
         return captured;
@@ -813,6 +916,10 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         passed: viewports.length - failed,
         failed,
         totalIssues: viewports.reduce((sum, viewport) => sum + viewport.issues.length, 0),
+        suppressedIssues: viewports.reduce(
+          (sum, viewport) => sum + viewport.suppressedIssues.length,
+          0,
+        ),
         rootCauseGroups: rootCauses.length,
         durationMs,
       },
@@ -849,9 +956,12 @@ program
   .option('--timeout <ms>', 'page load timeout', String(DEFAULT_TIMEOUT_MS))
   .option('--wait <ms>', 'delay after resize', String(DEFAULT_WAIT_MS))
   .option('--ready-selector <selector>', 'require a visible selector before scanning')
+  .option('--config <path>', 'project config path; defaults to slice.config.json when present')
   .exitOverride()
-  .action(async (url: string, options: CliOptions) => {
-    process.exitCode = await runSlice(url, options);
+  .action(async (url: string, options: CliOptions, command: Command) => {
+    const loaded = await loadSliceConfig(options.config);
+    const resolved = resolveRunOptions(command, options, loaded.config);
+    process.exitCode = await runSlice(url, resolved);
   });
 
 try {
