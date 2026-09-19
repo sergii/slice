@@ -52,7 +52,7 @@ jobs:
         run: npm run validate:package
 
       - name: Validate release layout
-        run: npm run validate:release
+        run: npm run validate:release:current
 
       # Browser-dependent checks are intentionally last because Chromium setup is expensive.
       - name: Install Chromium

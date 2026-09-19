@@ -280,7 +280,7 @@ jobs:
           exit 1
 
       - name: Responsive QA
-        uses: viewportable/slice@main
+        uses: viewportable/slice@v0.1.0-rc.1
         with:
           url: http://127.0.0.1:3000
           config: slice.config.json
@@ -350,7 +350,7 @@ The first RC is prepared only after that pass:
 npm version 0.1.0-rc.1 --no-git-tag-version
 ```
 
-Then finalize the changelog date and replace the temporary `viewportable/slice@main` references in this README and `examples/github/slice.yml` with the immutable `viewportable/slice@v0.1.0-rc.1` reference.
+Then finalize the changelog date and replace the temporary `viewportable/slice@v0.1.0-rc.1` references in this README and `examples/github/slice.yml` with the immutable `viewportable/slice@v0.1.0-rc.1` reference.
 
 Validate that exact tag contract before committing:
 

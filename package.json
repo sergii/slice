@@ -1,6 +1,6 @@
 {
   "name": "@viewportable/slice",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.1",
   "private": true,
   "description": "Deterministic responsive QA for coding agents",
   "homepage": "https://github.com/viewportable/slice#readme",
@@ -30,7 +30,7 @@
     "test:unit": "vitest run test/boundary.test.ts test/overflow.test.ts test/fixed-collision.test.ts test/fixed-occlusion.test.ts test/grouping.test.ts test/diagnose.test.ts test/selector.test.ts test/suppress.test.ts test/demo-server.test.mjs test/github-summary.test.mjs",
     "test:integration": "vitest run test/integration.test.ts",
     "validate:package": "node scripts/validate-package.mjs && npm pack --dry-run --ignore-scripts",
-    "check:fast": "npm run fmt:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run validate:package && npm run validate:release",
+    "check:fast": "npm run fmt:check && npm run lint && npm run typecheck && npm run test:unit && npm run build && npm run validate:package && npm run validate:release:current",
     "smoke": "node scripts/lab.mjs",
     "lab": "npm run check:fast && npm run test:integration && npm run smoke",
     "postinstall": "playwright install chromium",
@@ -41,7 +41,8 @@
     "demo:responsively:check": "node scripts/demo-responsively.mjs --no-open --once",
     "golden:openings": "node scripts/golden-openings.mjs",
     "validate:release": "node scripts/validate-release.mjs",
-    "preflight:rc": "node scripts/preflight-rc.mjs"
+    "preflight:rc": "node scripts/preflight-rc.mjs",
+    "validate:release:current": "node scripts/validate-release-current.mjs"
   },
   "dependencies": {
     "commander": "^14.0.1",

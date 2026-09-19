@@ -44,19 +44,21 @@
 ## Acceptance
 
 - [x] Golden harness prepared around historical broken ref `27bc8c0d...`.
-- [ ] Run `npm run preflight:rc` locally.
-- [ ] Openings broken-state golden run passes.
-- [ ] Exact historical mismatch window is confirmed: clean at 767px, occluded 768-819px, clean at 820px.
-- [ ] Openings fixed-state clean run passes.
-- [ ] Consecutive-run determinism passes.
+- [x] Run `npm run preflight:rc` locally.
+- [x] Openings broken-state golden run passes.
+- [x] Exact historical mismatch window is confirmed: clean at 767px, occluded 768-819px, clean at 820px.
+- [x] Openings fixed-state clean run passes.
+- [x] Consecutive-run determinism passes.
 
 ## First release candidate
 
+Local acceptance completed on 2026-09-19 against current Openings HEAD `d15848c681b4ce348b34a4ef5849ba5d1308d58a`.
+
 After all Acceptance items are green:
 
-- [ ] Set package version to `0.1.0-rc.1` with `npm version 0.1.0-rc.1 --no-git-tag-version`.
-- [ ] Finalize the changelog date/content.
-- [ ] Replace release-facing `viewportable/slice@main` examples with `viewportable/slice@v0.1.0-rc.1`.
+- [x] Set package version to `0.1.0-rc.1`.
+- [x] Finalize the changelog date/content.
+- [x] Replace release-facing `viewportable/slice@main` examples with `viewportable/slice@v0.1.0-rc.1`.
 - [ ] Run `npm run validate:release -- v0.1.0-rc.1`.
 - [ ] Commit the RC preparation to `main`.
 - [ ] Confirm CI is green on that release commit.

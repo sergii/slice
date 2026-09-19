@@ -33,7 +33,7 @@ jobs:
           exit 1
 
       - name: Run Slice
-        uses: viewportable/slice@main
+        uses: viewportable/slice@v0.1.0-rc.1
         with:
           url: http://127.0.0.1:3000
           config: slice.config.json
