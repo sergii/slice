@@ -101,13 +101,22 @@ const cssSourceReferenceSchema = z.object({
   value: z.string().min(1),
 });
 
-const rootCauseDiagnosisSchema = z.object({
-  kind: z.literal('min-width-constraint'),
-  property: z.literal('min-width'),
-  value: z.string().min(1),
-  suggestion: z.string().min(1),
-  source: cssSourceReferenceSchema.nullable(),
-});
+const rootCauseDiagnosisSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('min-width-constraint'),
+    property: z.literal('min-width'),
+    value: z.string().min(1),
+    suggestion: z.string().min(1),
+    source: cssSourceReferenceSchema.nullable(),
+  }),
+  z.object({
+    kind: z.literal('fixed-width-constraint'),
+    property: z.literal('width'),
+    value: z.string().min(1),
+    suggestion: z.string().min(1),
+    source: cssSourceReferenceSchema,
+  }),
+]);
 
 const rootCauseObservationSchema = z.object({
   viewportWidth: z.number().int().positive(),

@@ -65,10 +65,10 @@ export function groupHorizontalOverflow(
       if (!display || !LAYOUT_DISPLAYS.has(display)) continue;
 
       const affectedLeaves = descendantCount(ancestorIndex, leaf.side);
-      const hasDeterministicConstraint =
-        diagnoseHorizontalOverflowRoot(ancestor, viewport.width).diagnosis !== null;
+      const diagnosis = diagnoseHorizontalOverflowRoot(ancestor, viewport.width).diagnosis;
+      const hasSelfContainedConstraint = diagnosis?.kind === 'min-width-constraint';
 
-      if (affectedLeaves < 2 && !hasDeterministicConstraint) continue;
+      if (affectedLeaves < 2 && !hasSelfContainedConstraint) continue;
 
       rootByLeaf.set(leaf.nodeIndex, candidate);
       break;

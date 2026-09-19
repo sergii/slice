@@ -145,7 +145,7 @@ The JSON report preserves every leaf issue in `viewports[].issues`, links groupe
 
 ### Deterministic CSS diagnosis
 
-For grouped layout roots, Slice can explain a conservative CSS cause without AI. The first rule is a pixel `min-width` constraint that is wider than the available viewport space. When exactly one accessible matching stylesheet declaration sets that computed value, Slice also records its stylesheet and selector.
+For grouped layout roots, Slice can explain conservative CSS causes without AI. It recognizes a pixel `min-width` constraint that is wider than the available viewport space, and an authored fixed pixel `width` when that declaration can be attributed uniquely. Because computed `width` is often resolved to pixels even for responsive layouts, Slice does not claim a fixed-width cause unless it can find exactly one matching authored CSS declaration.
 
 ```text
 390   FAIL  section.plan-grid overflows right by 348px | 8 affected elements

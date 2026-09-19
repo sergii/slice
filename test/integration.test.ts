@@ -221,6 +221,46 @@ describe('slice CLI', () => {
     expect(result.stdout).not.toContain('Â');
   });
 
+  it('diagnoses an authored fixed width on a grouped layout root', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('fixed-width-root.html', [
+      '--widths',
+      '390,720',
+      '--wait',
+      '0',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+
+    expect(report.rootCauses).toHaveLength(1);
+    expect(report.rootCauses[0]).toMatchObject({
+      selector: 'section.fixed-grid',
+      diagnosis: {
+        kind: 'fixed-width-constraint',
+        property: 'width',
+        value: '700px',
+        source: {
+          stylesheet: null,
+          selector: '.fixed-grid',
+          property: 'width',
+          value: '700px',
+        },
+      },
+    });
+    expect(report.rootCauses[0].boundaries).toEqual([
+      expect.objectContaining({
+        boundary: 698,
+        lastGoodWidth: 699,
+        firstBadWidth: 698,
+      }),
+    ]);
+    expect(result.stdout).toContain('reason: width: 700px');
+    expect(result.stdout).toContain('source: .fixed-grid @ <inline stylesheet>');
+  });
+
   it('reports an independent fixed-element collision without document overflow', async () => {
     const out = await makeOutDir();
     const result = await runCli('fixed-collision.html', [

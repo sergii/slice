@@ -124,13 +124,25 @@ export interface CssSourceReference {
   value: string;
 }
 
-export interface RootCauseDiagnosis {
-  kind: 'min-width-constraint';
-  property: 'min-width';
-  value: string;
-  suggestion: string;
-  source: CssSourceReference | null;
-}
+export type RootCauseDiagnosis =
+  | {
+      kind: 'min-width-constraint';
+      property: 'min-width';
+      value: string;
+      suggestion: string;
+      source: CssSourceReference | null;
+    }
+  | {
+      kind: 'fixed-width-constraint';
+      property: 'width';
+      value: string;
+      suggestion: string;
+      source: CssSourceReference;
+    };
+
+export type RootCauseDiagnosisCandidate =
+  | Omit<Extract<RootCauseDiagnosis, { kind: 'min-width-constraint' }>, 'source'>
+  | Omit<Extract<RootCauseDiagnosis, { kind: 'fixed-width-constraint' }>, 'source'>;
 
 export interface RootCauseObservation {
   viewportWidth: number;
