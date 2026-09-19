@@ -234,7 +234,6 @@ export function detectFixedContentOcclusions(
   return findings;
 }
 
-
 export const fixedContentOcclusionDetector: Detector<FixedContentOcclusionFinding, LayoutNode> = {
   id: 'fixed-content-occlusion',
   requires: ['geometry', 'computed-styles', 'paint-order', 'tree'],
