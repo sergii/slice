@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+
+      .always-overflows {
+        width: 700px;
+        height: 20px;
+      }
+
+      .left-control,
+      .right-control {
+        position: fixed;
+        bottom: 20px;
+        width: 200px;
+        height: 48px;
+      }
+
+      .left-control {
+        left: 20px;
+      }
+
+      .right-control {
+        right: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="always-overflows">Persistent overflow</div>
+    <button class="left-control" type="button">Left</button>
+    <button class="right-control" type="button">Right</button>
+  </body>
+</html>

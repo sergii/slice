@@ -86,6 +86,7 @@ export const viewportResultSchema = z.object({
 
 export const boundaryResultSchema = z.object({
   issueId: z.string().min(1),
+  issueType: z.enum(['horizontal-overflow', 'fixed-element-collision', 'fixed-content-occlusion']),
   boundary: z.number().int().positive(),
   lastGoodWidth: z.number().int().positive(),
   firstBadWidth: z.number().int().positive(),

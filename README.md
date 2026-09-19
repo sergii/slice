@@ -178,7 +178,7 @@ Slice also reports deterministic collisions between independent visible `positio
 390   FAIL  button.target-profile overlaps button.role-shapes | 80x40px
 ```
 
-Collision issues are stored as `type: "fixed-element-collision"` with both stable selectors, both bounding boxes, overlap width/height/area, and z-index evidence. Exact breakpoint search currently remains specific to horizontal overflow.
+Collision issues are stored as `type: "fixed-element-collision"` with both stable selectors, both bounding boxes, overlap width/height/area, and z-index evidence. Exact breakpoint search is issue-specific and applies to fixed-element collisions as well as horizontal overflow.
 
 ### Fixed-content occlusion detector
 
@@ -188,7 +188,7 @@ Slice reports a fixed element when it paints above and meaningfully covers a vis
 390   FAIL  button.target-profile covers button.apply | 63% (100x48px)
 ```
 
-Occlusion issues are stored as `type: "fixed-content-occlusion"` with the occluder and target selectors, both bounding boxes, overlap area, target coverage percentage, z-index values, and DOMSnapshot paint-order evidence. Fixed-vs-fixed overlaps remain the responsibility of `fixed-element-collision`.
+Occlusion issues are stored as `type: "fixed-content-occlusion"` with the occluder and target selectors, both bounding boxes, overlap area, target coverage percentage, z-index values, and DOMSnapshot paint-order evidence. Fixed-vs-fixed overlaps remain the responsibility of `fixed-element-collision`. Exact breakpoint search tracks each occlusion independently, even when unrelated findings exist at both sampled widths.
 
 ## Local modernization lab
 
