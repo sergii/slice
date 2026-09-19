@@ -65,9 +65,7 @@ export function parseOracle(markdown, options = {}) {
 
     if (existing) {
       if (existing.page !== page) {
-        throw new Error(
-          `Distinct RLF ${id} changed page identity: ${existing.page} vs ${page}`,
-        );
+        throw new Error(`Distinct RLF ${id} changed page identity: ${existing.page} vs ${page}`);
       }
 
       const duplicate = existing.reports.some(
