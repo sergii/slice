@@ -157,6 +157,9 @@ export function compatibleFindings(pageResult, failure) {
         issueId: issue.id,
         issueType: issue.type,
         selector: issue.selector,
+        side: issue.side ?? null,
+        otherSelector: issue.otherSelector ?? null,
+        targetSelector: issue.targetSelector ?? null,
         oracleReportTypes: [...new Set(matchedReportTypes)],
       });
     }
@@ -268,6 +271,9 @@ export function compatibleFindingsForReport(pageResult, report) {
         issueId: issue.id,
         issueType: issue.type,
         selector: issue.selector,
+        side: issue.side ?? null,
+        otherSelector: issue.otherSelector ?? null,
+        targetSelector: issue.targetSelector ?? null,
       });
     }
   }
