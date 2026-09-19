@@ -16,7 +16,9 @@ No archived third-party web pages are vendored into this repository. The benchma
 
 ReDeCheck can emit multiple reports for the same underlying visual defect. Its authors manually grouped those reports under one Distinct RLF ID.
 
-Viewportable therefore scores against the 33 distinct problems rather than the much larger number of raw ReDeCheck reports.
+A single Distinct RLF can also have multiple ReDeCheck report classes. For example, CloudConvert RLF #1 is both an `Element Collision` report and a `Small-Range` report at 980px. Viewportable therefore models the oracle as `Distinct RLF -> reports[]`, not as one failure type per RLF.
+
+Viewportable scores against the 33 distinct problems rather than the much larger number of raw ReDeCheck reports.
 
 ## Baseline classifications
 
@@ -24,7 +26,7 @@ The automatic baseline is intentionally conservative.
 
 For every distinct RLF the benchmark emits one of:
 
-- `candidate-match` - Slice emitted a compatible rule family at a sampled width inside the oracle range;
+- `candidate-match` - Slice emitted a rule compatible with at least one report attached to the Distinct RLF at a sampled width inside that report's oracle range;
 - `missed` - Slice has a compatible current rule family, but emitted no compatible finding inside the oracle range;
 - `unsupported` - current Slice has no corresponding detector family;
 - `environment-error` - the archived page could not be scanned reliably.
@@ -41,7 +43,7 @@ A `candidate-match` is **not** automatically called a true detection because pag
 | Small-Range | none | unsupported |
 | Wrapping | none | unsupported |
 
-This means the first baseline is expected to expose capability gaps. That is the point.
+Some Distinct RLFs carry more than one class, so these rows are detector-family mappings rather than mutually exclusive problem counts. This means the first baseline is expected to expose capability gaps. That is the point.
 
 ## Sampling
 
