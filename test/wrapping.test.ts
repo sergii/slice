@@ -29,7 +29,10 @@ function node(
   };
 }
 
-function surface(width: number, positions: Array<[number, number]>): { width: number; nodes: LayoutNode[] } {
+function surface(
+  width: number,
+  positions: Array<[number, number]>,
+): { width: number; nodes: LayoutNode[] } {
   return {
     width,
     nodes: [
