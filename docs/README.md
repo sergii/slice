@@ -4,6 +4,12 @@ This directory is the durable engineering memory for the Viewportable Engine.
 
 The goal is to preserve not only the current design, but also **why it exists, what evidence changed our thinking, what is committed next, and what remains only an idea**.
 
+## Scope
+
+This is contributor and architecture documentation.
+
+It is not intended to replace end-user product documentation. If Viewportable's public documentation grows, organize tutorials, how-to guides, reference, and explanation separately using a Diátaxis-style structure rather than mixing those concerns into the Architecture Knowledge Base.
+
 ## Information types
 
 ### Architecture Decision Records - `docs/adr/`
@@ -77,18 +83,20 @@ This replaces vague buckets such as "ChatGPT ideas" or a single undifferentiated
 Items can move:
 
 ```text
-research -> ADR
+research -> RFC
 research -> design backlog
+RFC -> ADR when a durable architectural decision is accepted
+RFC -> implementation when no separate ADR is needed
 design backlog -> roadmap
 roadmap -> implementation
-implementation -> changelog
+implementation -> changelog when the change is notable to users
 ```
 
 They can also be rejected or superseded.
 
 ### Changelog - `../CHANGELOG.md`
 
-The changelog records user- or contributor-visible changes that actually shipped or are part of the unreleased implementation.
+The changelog records notable user-facing changes that shipped or are intended for the next release. Internal refactors, research, and documentation-only architecture changes belong in PRs, ADRs, RFCs, or research notes instead.
 
 It is not a planning document.
 
