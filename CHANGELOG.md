@@ -19,6 +19,8 @@ All notable changes to Slice are documented here.
 - Composite GitHub Action with job summary, artifact upload, and the same scanner/report contract as the CLI.
 - Demo and Responsively harnesses plus end-to-end CI coverage.
 - Real-project Openings Golden Acceptance harness using the historical pre-fix regression and consecutive clean fixed runs.
+- One-command RC preflight that composes deterministic, browser, demo, release-layout, and Openings golden gates.
+- Tag-driven GitHub release workflow with release validation, composite-Action smoke, and an attached package tarball.
 
 ### Changed
 
@@ -26,6 +28,7 @@ All notable changes to Slice are documented here.
 - Package metadata now declares repository, homepage, issue tracker, and AGPL licensing.
 - npm package identity is fixed as `@viewportable/slice` while the executable remains `slice`.
 - npm publication remains intentionally disabled with `"private": true` until release approval.
+- Tagged releases require package-version/tag agreement and immutable GitHub Action references instead of `@main`.
 
 ### License
 
