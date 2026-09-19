@@ -282,9 +282,11 @@ describe('slice CLI', () => {
     expect(result.code).toBe(1);
     const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
 
-    expect(report.viewports.every((viewport: { issues: Array<{ type: string }> }) =>
-      viewport.issues.some((issue) => issue.type === 'horizontal-overflow'),
-    )).toBe(true);
+    expect(
+      report.viewports.every((viewport: { issues: Array<{ type: string }> }) =>
+        viewport.issues.some((issue) => issue.type === 'horizontal-overflow'),
+      ),
+    ).toBe(true);
 
     const collisionBoundary = report.boundaries.find(
       (boundary: { issueType: string }) => boundary.issueType === 'fixed-element-collision',
