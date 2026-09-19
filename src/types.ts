@@ -109,6 +109,7 @@ export interface ViewportResult {
 
 export interface BoundaryResult {
   issueId: string;
+  issueType: Issue['type'];
   boundary: number;
   lastGoodWidth: number;
   firstBadWidth: number;
