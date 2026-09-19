@@ -193,3 +193,114 @@ export function classifyFailure(failure, pageRun) {
     matches,
   };
 }
+
+
+function parseReportSection(markdown, startHeading, endHeading, classification) {
+  const start = markdown.indexOf(startHeading);
+  const end = endHeading ? markdown.indexOf(endHeading, start + 1) : markdown.length;
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error(`Could not isolate the ${classification} section in results-archive.md`);
+  }
+
+  const reports = [];
+
+  for (const line of markdown.slice(start, end).split('\n')) {
+    if (!line.startsWith('|')) continue;
+
+    const cells = line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    const classificationIndex = cells.findIndex((cell) => cell === classification);
+
+    if (classificationIndex < 3) continue;
+
+    const type = cells[0];
+    const page = cells[1];
+    const rangeCell = cells[classificationIndex - 1];
+    const reasonCell = cells[classificationIndex + 1] ?? '';
+    const rangeMatch = rangeCell.match(/(\d+)px-(\d+)px/);
+    const reportMatch = reasonCell.match(/\((\.\.\/[^)]+)\)/);
+
+    if (!type || !page || !rangeMatch) continue;
+
+    reports.push({
+      id: `${classification.toLowerCase()}-${reports.length + 1}`,
+      classification,
+      type,
+      page,
+      range: {
+        min: Number(rangeMatch[1]),
+        max: Number(rangeMatch[2]),
+      },
+      report: reportMatch?.[1] ?? null,
+      reason: reasonCell || null,
+    });
+  }
+
+  return reports;
+}
+
+export function parseAntiOracle(markdown) {
+  return [
+    ...parseReportSection(markdown, '### False Positives', '### Non-Observable Issues', 'FP'),
+    ...parseReportSection(markdown, '### Non-Observable Issues', null, 'NOI'),
+  ];
+}
+
+export function supportForReport(report) {
+  return CLASS_MAPPING[report.type]?.support ?? 'unsupported';
+}
+
+export function compatibleFindingsForReport(pageResult, report) {
+  const mapping = CLASS_MAPPING[report.type];
+  if (!mapping || mapping.issueTypes.length === 0) return [];
+
+  const matches = [];
+
+  for (const viewport of pageResult.viewports ?? []) {
+    if (viewport.width < report.range.min || viewport.width > report.range.max) continue;
+
+    for (const issue of viewport.issues ?? []) {
+      if (!mapping.issueTypes.includes(issue.type)) continue;
+
+      matches.push({
+        viewportWidth: viewport.width,
+        issueId: issue.id,
+        issueType: issue.type,
+        selector: issue.selector,
+      });
+    }
+  }
+
+  return matches;
+}
+
+export function classifyAntiOracleReport(report, pageRun) {
+  const support = supportForReport(report);
+
+  if (!pageRun || pageRun.status === 'environment-error') {
+    return {
+      classification: 'environment-error',
+      support,
+      matches: [],
+    };
+  }
+
+  if (support === 'unsupported') {
+    return {
+      classification: 'unsupported',
+      support,
+      matches: [],
+    };
+  }
+
+  const matches = compatibleFindingsForReport(pageRun.result, report);
+
+  return {
+    classification: matches.length > 0 ? 'negative-candidate' : 'clean',
+    support,
+    matches,
+  };
+}
