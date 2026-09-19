@@ -41,8 +41,6 @@ runs:
       uses: actions/setup-node@v7
       with:
         node-version: '24'
-        cache: npm
-        cache-dependency-path: ${{ github.action_path }}/package-lock.json
 
     - name: Prepare Slice
       shell: bash
@@ -86,7 +84,7 @@ runs:
       if: ${{ always() }}
       shell: bash
       env:
-        SLICE_RESULT_PATH: ${{ steps.scan.outputs.result_path }}
+        SLICE_RESULT_PATH: ${{ inputs.out }}/results.json
       run: node "$GITHUB_ACTION_PATH/scripts/github-summary.mjs" "$SLICE_RESULT_PATH"
 
     - name: Upload Slice results
@@ -95,7 +93,7 @@ runs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ steps.scan.outputs.result_path }}
+        path: ${{ inputs.out }}/results.json
         if-no-files-found: ignore
         include-hidden-files: true
 
