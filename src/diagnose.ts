@@ -1,7 +1,7 @@
-import type { LayoutNode, RootCauseDiagnosis } from './types.js';
+import type { LayoutNode, RootCauseDiagnosisCandidate } from './types.js';
 
 export interface RootCauseMeasurement {
-  diagnosis: Omit<RootCauseDiagnosis, 'source'> | null;
+  diagnosis: RootCauseDiagnosisCandidate | null;
   computedWidthPx: number;
   availableWidthPx: number;
 }
