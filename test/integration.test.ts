@@ -381,18 +381,12 @@ describe('slice CLI', () => {
       'utf8',
     );
 
-    const result = await runCli('clean.html', [
-      '--config',
-      configPath,
-      '--widths',
-      '320,390',
-    ]);
+    const result = await runCli('clean.html', ['--config', configPath, '--widths', '320,390']);
 
     expect(result.code).toBe(0);
     const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
     expect(report.viewports.map((viewport: { width: number }) => viewport.width)).toEqual([
-      320,
-      390,
+      320, 390,
     ]);
   });
 
