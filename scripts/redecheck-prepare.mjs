@@ -44,9 +44,7 @@ async function ensureCorpus() {
 
   const checkedOut = git(['rev-parse', 'HEAD'], pagesDir);
   if (checkedOut !== sources.corpus.commit) {
-    throw new Error(
-      `Expected corpus commit ${sources.corpus.commit}, checked out ${checkedOut}`,
-    );
+    throw new Error(`Expected corpus commit ${sources.corpus.commit}, checked out ${checkedOut}`);
   }
 
   process.stdout.write(`Prepared ReDeCheck corpus at ${checkedOut}\n`);
