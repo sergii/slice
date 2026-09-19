@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { classifyFailure, parseOracle, widthsForPage } from '../scripts/lib/redecheck-oracle.mjs';
+import {
+  classifyAntiOracleReport,
+  classifyFailure,
+  parseAntiOracle,
+  parseOracle,
+  widthsForPage,
+} from '../scripts/lib/redecheck-oracle.mjs';
 
 const archive = `### True Positives### {#TP}
 
@@ -9,6 +15,14 @@ const archive = `### True Positives### {#TP}
 | Wrapping| Other | [2](../Other-failure-1.html#About-drlf) | 476px-480px | TP | wrapped |
 
 ### False Positives### {#FP}
+
+| **Report Type** | **Web Page** | **Viewport Range** | **Classification** | **Reason** |
+| Small-Range| Other | 490px-492px | FP | coincidental |
+
+### Non-Observable Issues### {#NOI}
+
+| **Report Type** | **Web Page** | **Viewport Range** | **Classification** | **Reason** |
+| Viewport Protrusion| Example | 350px-360px | NOI | DOM overflow is not visually observable |
 `;
 
 describe('ReDeCheck benchmark oracle', () => {
@@ -76,5 +90,38 @@ describe('ReDeCheck benchmark oracle', () => {
     });
 
     expect(classified.classification).toBe('unsupported');
+  });
+
+  it('parses FP and NOI reports as a separate anti-oracle', () => {
+    const reports = parseAntiOracle(archive);
+
+    expect(reports).toHaveLength(2);
+    expect(reports.map((report) => report.classification)).toEqual(['FP', 'NOI']);
+  });
+
+  it('marks comparable NOI-range findings as negative candidates', () => {
+    const report = parseAntiOracle(archive).find(
+      (candidate) => candidate.classification === 'NOI',
+    );
+    const classified = classifyAntiOracleReport(report, {
+      status: 'ok',
+      result: {
+        viewports: [
+          {
+            width: 355,
+            issues: [
+              {
+                id: 'issue-negative',
+                type: 'horizontal-overflow',
+                selector: '.not-visually-observable',
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(classified.classification).toBe('negative-candidate');
+    expect(classified.matches).toHaveLength(1);
   });
 });
