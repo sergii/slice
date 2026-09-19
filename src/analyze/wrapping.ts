@@ -38,9 +38,7 @@ function rowGroups(
   return groups;
 }
 
-export function detectWrappingTransitions(
-  samples: WrappingSample[],
-): DetectedWrappingTransition[] {
+export function detectWrappingTransitions(samples: WrappingSample[]): DetectedWrappingTransition[] {
   const ordered = [...samples].sort((first, second) => second.width - first.width);
   const findings: DetectedWrappingTransition[] = [];
   const seen = new Set<string>();
@@ -65,8 +63,7 @@ export function detectWrappingTransitions(
 
         const commonNodes = widerRow.nodeIndices.filter(
           (nodeIndex) =>
-            narrowerByIndex.has(nodeIndex) &&
-            narrowerParent.rowByNodeIndex.has(nodeIndex),
+            narrowerByIndex.has(nodeIndex) && narrowerParent.rowByNodeIndex.has(nodeIndex),
         );
         if (commonNodes.length < 3) continue;
 
