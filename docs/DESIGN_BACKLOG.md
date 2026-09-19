@@ -6,13 +6,8 @@ Moving an item here means "remember and revisit with evidence", not "build next"
 
 ## Platform expansion
 
-### React Native adapter spike
+The committed React Native adapter spike is tracked in `ROADMAP.md`; only uncommitted platform directions belong here.
 
-- Status: candidate
-- Trigger: structural web model and at least one cross-platform-safe geometry detector are stable.
-- Goal: normalize a real simulator-rendered React Native screen into the internal Surface IR and run an existing detector without rewriting its core algorithm.
-- Success criterion: one real RN layout regression is found using shared analysis logic.
-- Avoid: broad RN SDK/product support before this proof.
 
 ### Capacitor native verification
 
@@ -28,23 +23,8 @@ Moving an item here means "remember and revisit with evidence", not "build next"
 
 ## Analysis capabilities
 
-### Element protrusion
+The committed ReDeCheck-derived sequence (`element-protrusion`, small-range anomaly, wrapping) is tracked in `ROADMAP.md` and `docs/research/REDECHECK.md`.
 
-- Status: candidate
-- Detect a child extending meaningfully beyond a parent boundary.
-- Strong candidate for the first new structural detector after the ReDeCheck baseline.
-
-### Small-range layout anomaly
-
-- Status: research-needed
-- Detect short-lived relationship states between stable neighboring ranges.
-- Validate thresholds on benchmark data rather than copying ReDeCheck's historical threshold.
-
-### Wrapping transition detector
-
-- Status: research-needed
-- Track row/column membership changes across viewport intervals.
-- Must distinguish legitimate responsive reflow from anomalous single-element wrapping.
 
 ### Structural base-vs-head comparison
 
