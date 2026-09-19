@@ -2,8 +2,12 @@
 
 Slice is a deterministic responsive QA CLI for coding agents. It loads one page once in Chromium, checks a set of viewport widths, detects horizontal overflow without screenshots or AI, attributes each failure to the deepest offending element, and writes a machine-readable report to `.slice/results.json`.
 
+The package identity is reserved as **`@viewportable/slice`** and the executable remains **`slice`**. Publishing is intentionally disabled with `"private": true` until the v0.1 release decision.
+
+After package publication, the intended one-shot form is:
+
 ```bash
-npx slice http://localhost:3000
+npx @viewportable/slice http://localhost:3000
 ```
 
 ```text
@@ -285,6 +289,40 @@ jobs:
 The action uploads `.slice/results.json` as `slice-results` by default. Use the `out` and `artifact-name` inputs to change those values. Set `install-browser: 'false'` only when Playwright Chromium and its OS dependencies are already installed earlier in the job.
 
 The copy-ready workflow lives at `examples/github/slice.yml`. The repository CI also invokes `uses: ./` against the built-in fixed demo so the published Action surface is exercised end to end.
+
+## Openings Golden Acceptance
+
+The v0.1 release candidate has a real-project golden harness against `sergii/openings`. It uses the actual historical pre-fix commit `27bc8c0d...` as the broken state and the current local Openings checkout as the fixed state.
+
+```bash
+npm run golden:openings
+```
+
+The command expects a local Openings Git checkout. It auto-detects common sibling paths, or you can provide it explicitly:
+
+```bash
+OPENINGS_REPO=/absolute/path/to/openings npm run golden:openings
+```
+
+Acceptance is deliberately stronger than a single screenshot or sample width:
+
+- the historical regression must reproduce a `fixed-content-occlusion`;
+- that stable issue must be absent at 767px, present from 768px through 819px, and absent again at 820px;
+- per-issue boundary search must report the exact 768px and 819px edges of that historical mismatch window;
+- the current Openings checkout must be clean across `320,375,390,430,767,768,819,820,1024,1280,1440`;
+- the current checkout is scanned twice on the same local URL;
+- the two reports must be byte-equivalent after removing only `timestamp` and `summary.durationMs`.
+
+The run writes retained evidence under:
+
+```text
+.slice/golden/openings/broken/results.json
+.slice/golden/openings/fixed-1/results.json
+.slice/golden/openings/fixed-2/results.json
+.slice/golden/openings/summary.json
+```
+
+The harness requires a clean Openings working tree by default. Set `OPENINGS_ALLOW_DIRTY=1` only when deliberately validating uncommitted work.
 
 ## Local modernization lab
 
