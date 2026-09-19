@@ -105,3 +105,18 @@ Accepted on 2026-09-19 against Openings HEAD `d15848c681b4ce348b34a4ef5849ba5d13
 - MCP/agent orchestration beyond consuming the existing CLI/JSON contract.
 - Multi-page crawling.
 - Generic overlapping-flow-element detection.
+
+
+## Post-v0.1 engine direction
+
+Slice is expected to evolve into the Viewportable engine. Future capability work should follow the modular, capability-driven architecture in [docs/ENGINE_ARCHITECTURE.md](docs/ENGINE_ARCHITECTURE.md): disabled capabilities should add approximately zero runtime cost, expensive browser evidence should be captured at most once per viewport and shared, and detector modules should remain simple TypeScript units rather than a heavy plugin framework.
+
+Initial responsive-layout research is tracked in [docs/research/REDECHECK.md](docs/research/REDECHECK.md). ReDeCheck's Responsive Layout Graph, small-range anomaly detection, wrapping/protrusion models, regression graph comparison, and independent failure corpus are research inputs rather than runtime dependencies.
+
+The first post-v0.1 research sequence is:
+
+1. benchmark current Slice against the independently collected ReDeCheck corpus;
+2. measure concrete capability gaps before extending the model;
+3. prototype the smallest useful relationship-interval representation;
+4. add element protrusion, small-range anomaly, and wrapping detectors one at a time;
+5. keep screenshot/pixel verification optional until structural evidence shows where it reduces false positives enough to justify its cost.
