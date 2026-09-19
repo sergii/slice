@@ -51,6 +51,9 @@ jobs:
       - name: Validate npm package
         run: npm run validate:package
 
+      - name: Validate release layout
+        run: npm run validate:release
+
       # Browser-dependent checks are intentionally last because Chromium setup is expensive.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
