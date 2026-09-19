@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - benchmark/redecheck-baseline
+      - engine/observable-overflow
     paths:
       - benchmark/redecheck/**
       - scripts/redecheck-prepare.mjs
