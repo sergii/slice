@@ -39,6 +39,7 @@ Current:
 
 - [ReDeCheck research](research/REDECHECK.md)
 - [Protocol and interchange survey](research/PROTOCOLS_AND_INTERCHANGE.md)
+- [SARIF and runtime UI findings](research/SARIF_RUNTIME_UI.md)
 
 ### Public contract drafts - `docs/contracts/`
 
