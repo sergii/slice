@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -324,6 +324,76 @@ describe('slice CLI', () => {
       firstBadWidth: 768,
     });
     expect(result.stdout).toContain('fixed-content-occlusion | breaks at 768px');
+  });
+
+  it('loads project config and retains suppressed findings as evidence', async () => {
+    const workspace = await makeOutDir();
+    const out = path.join(workspace, 'report');
+    const configPath = path.join(workspace, 'slice.config.json');
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        widths: [390],
+        wait: 0,
+        boundary: false,
+        out,
+        ignore: [
+          {
+            type: 'fixed-element-collision',
+            selector: 'button.target-profile',
+            otherSelector: 'button.role-shapes',
+          },
+        ],
+      }),
+      'utf8',
+    );
+
+    const result = await runCli('fixed-collision.html', ['--config', configPath]);
+
+    expect(result.code).toBe(0);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    expect(report.viewports).toHaveLength(1);
+    expect(report.viewports[0]).toMatchObject({
+      width: 390,
+      status: 'pass',
+      issues: [],
+    });
+    expect(report.viewports[0].suppressedIssues).toHaveLength(1);
+    expect(report.viewports[0].suppressedIssues[0].type).toBe('fixed-element-collision');
+    expect(report.summary.suppressedIssues).toBe(1);
+    expect(result.stdout).toContain('PASS | 1 suppressed');
+  });
+
+  it('lets explicit CLI values override project config', async () => {
+    const workspace = await makeOutDir();
+    const out = path.join(workspace, 'report');
+    const configPath = path.join(workspace, 'slice.config.json');
+
+    await writeFile(
+      configPath,
+      JSON.stringify({
+        widths: [390],
+        wait: 0,
+        boundary: false,
+        out,
+      }),
+      'utf8',
+    );
+
+    const result = await runCli('clean.html', [
+      '--config',
+      configPath,
+      '--widths',
+      '320,390',
+    ]);
+
+    expect(result.code).toBe(0);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    expect(report.viewports.map((viewport: { width: number }) => viewport.width)).toEqual([
+      320,
+      390,
+    ]);
   });
 
   it('is deterministic apart from timestamp and durationMs', async () => {
