@@ -1,9 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  collectRequiredCapabilities,
-  runDetector,
-  type Detector,
-} from '../src/detector.js';
+import { collectRequiredCapabilities, runDetector, type Detector } from '../src/detector.js';
 import type { SurfaceNode, SurfaceSnapshot } from '../src/surface.js';
 
 const node: SurfaceNode = {
