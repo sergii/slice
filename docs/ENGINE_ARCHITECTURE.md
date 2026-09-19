@@ -2,6 +2,26 @@
 
 Slice is expected to evolve into the Viewportable engine. The engine should be modular and composable from the beginning, without turning detector development into plugin-framework work and without charging runtime cost for disabled capabilities.
 
+## System context
+
+Viewportable Engine sits between callers that request visual verification and platform runtimes that can render a UI.
+
+```text
+Human / Agent / CI / Desktop
+           |
+           v
+      ScanRequest
+           |
+           v
+    Viewportable Engine
+      /           \
+     v             v
+browser/native   findings/reporters
+runtime          GitHub/MCP/JSON/UI
+```
+
+The engine does not own application deployment, CI compute, browser/device farms, or product source code. It consumes reachable/renderable targets and produces structured findings.
+
 ## Goals
 
 1. Keep the deterministic layout engine small and fast.
