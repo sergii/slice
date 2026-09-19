@@ -32,7 +32,7 @@ outputs:
     value: ${{ steps.scan.outputs.result_path }}
   artifact_url:
     description: URL of the uploaded Slice artifact when available
-    value: ${{ steps.artifact.outputs.artifact_url }}
+    value: ${{ steps.artifact.outputs.artifact-url }}
 
 runs:
   using: composite
