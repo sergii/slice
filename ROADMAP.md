@@ -60,17 +60,22 @@ Completed:
 - Explicit `AGPL-3.0-only` license.
 - Full `LICENSE` file.
 - `CHANGELOG.md` for v0.1.0.
+- npm package identity fixed as `@viewportable/slice`.
+- CLI binary remains `slice`.
+- Accidental npm publication blocked with `"private": true` until release.
+- Openings Golden Acceptance harness prepared around the real historical regression.
 
 Remaining:
 
-- Confirm publishable npm package identity.
-- Validate final packed contents after package identity is fixed.
+- Confirm npm scope ownership/permissions before publication.
+- Remove `"private": true` only when publishing is explicitly approved.
+- Validate final packed contents after publication safety is removed.
 - Ensure release notes match the final package/action usage.
 - Tag `v0.1.0` only after Phase 6 is green.
 
-## Phase 6 - Real-project acceptance - Remaining
+## Phase 6 - Real-project acceptance - Harness ready, execution remaining
 
-Run the release candidate against Openings.
+Run `npm run golden:openings` against the local current Openings checkout.
 
 Required acceptance:
 
