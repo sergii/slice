@@ -23,6 +23,8 @@ export function diagnoseHorizontalOverflowRoot(
   const availableWidthPx = Math.max(0, Math.round(viewportWidth - Math.max(0, node.rect.x)));
   const minWidthValue = node.styles['min-width']?.trim() ?? '';
   const minWidthPx = parsePixelValue(minWidthValue);
+  const widthValue = node.styles.width?.trim() ?? '';
+  const widthPx = parsePixelValue(widthValue);
 
   if (
     minWidthPx !== null &&
@@ -35,6 +37,19 @@ export function diagnoseHorizontalOverflowRoot(
         property: 'min-width',
         value: minWidthValue,
         suggestion: 'remove or constrain min-width, or let the layout reflow',
+      },
+      computedWidthPx,
+      availableWidthPx,
+    };
+  }
+
+  if (widthPx !== null && widthPx > availableWidthPx + 1 && node.rect.width + 1 >= widthPx) {
+    return {
+      diagnosis: {
+        kind: 'fixed-width-constraint',
+        property: 'width',
+        value: widthValue,
+        suggestion: 'remove the fixed width, constrain it, or let the layout size responsively',
       },
       computedWidthPx,
       availableWidthPx,
