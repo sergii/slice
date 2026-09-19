@@ -319,4 +319,5 @@ Only after structural candidates are useful:
 - Do not copy thresholds such as 5px without validation.
 - Do not make a graph abstraction larger than the detectors that consume it.
 - Preserve deterministic, explainable findings.
+- Do not vendor archived third-party corpus pages until redistribution rights are verified; external/local benchmark use is the default.
 - Benchmark every new expensive capability.
