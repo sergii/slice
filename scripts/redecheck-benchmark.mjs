@@ -283,12 +283,7 @@ function renderSummary(report) {
   const environmentPages = Object.entries(report.environmentPages);
 
   if (environmentPages.length > 0) {
-    lines.push(
-      '## Environment errors',
-      '',
-      '| Page | Exit | Error |',
-      '| --- | ---: | --- |',
-    );
+    lines.push('## Environment errors', '', '| Page | Exit | Error |', '| --- | ---: | --- |');
 
     for (const [page, pageRun] of environmentPages) {
       const error = (pageRun.stderr || pageRun.stdout || 'unknown scanner error')
