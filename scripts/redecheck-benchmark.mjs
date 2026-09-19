@@ -7,7 +7,9 @@ import { fileURLToPath } from 'node:url';
 import {
   CLASS_MAPPING,
   STANDARD_WIDTHS,
+  classifyAntiOracleReport,
   classifyFailure,
+  parseAntiOracle,
   parseOracle,
   widthsForPage,
 } from './lib/redecheck-oracle.mjs';
@@ -254,13 +256,21 @@ await access(archivePath);
 const sources = JSON.parse(await readFile(sourcesPath, 'utf8'));
 const archive = await readFile(archivePath, 'utf8');
 const oracleFailures = parseOracle(archive);
+const antiOracleReports = parseAntiOracle(archive);
 const corpus = await corpusPages();
 const failuresByPage = new Map();
+const antiReportsByPage = new Map();
 
 for (const failure of oracleFailures) {
   const list = failuresByPage.get(failure.page) ?? [];
   list.push(failure);
   failuresByPage.set(failure.page, list);
+}
+
+for (const report of antiOracleReports) {
+  const list = antiReportsByPage.get(report.page) ?? [];
+  list.push(report);
+  antiReportsByPage.set(report.page, list);
 }
 
 await mkdir(pageOutputRoot, { recursive: true });
@@ -274,7 +284,8 @@ try {
       [...failuresByPage.keys()].find((name) => name.toLowerCase() === corpusPage.toLowerCase()) ??
       corpusPage;
     const pageFailures = failuresByPage.get(oraclePage) ?? [];
-    const widths = widthsForPage(pageFailures);
+    const pageAntiReports = antiReportsByPage.get(oraclePage) ?? [];
+    const widths = widthsForPage(pageFailures, pageAntiReports);
     const pageOut = path.join(pageOutputRoot, slug(corpusPage));
     const url = `${origin}/${encodeURIComponent(corpusPage)}/index.html`;
 
@@ -348,6 +359,12 @@ const scoredFailures = oracleFailures.map((failure) => ({
   ...classifyFailure(failure, pageRuns.get(failure.page)),
 }));
 
+const scoredAntiOracle = antiOracleReports.map((antiReport) => ({
+  ...antiReport,
+  sourceClassification: antiReport.classification,
+  ...classifyAntiOracleReport(antiReport, pageRuns.get(antiReport.page)),
+}));
+
 const classifications = {
   'candidate-match': 0,
   missed: 0,
@@ -380,6 +397,23 @@ const byReportType = Object.entries(CLASS_MAPPING).map(([type, mapping]) => ({
   issueTypes: mapping.issueTypes,
 }));
 
+const antiOracleBySource = ['FP', 'NOI'].map((sourceClassification) => {
+  const reports = scoredAntiOracle.filter(
+    (report) => report.sourceClassification === sourceClassification,
+  );
+
+  return {
+    sourceClassification,
+    total: reports.length,
+    negativeCandidate: reports.filter((report) => report.classification === 'negative-candidate')
+      .length,
+    clean: reports.filter((report) => report.classification === 'clean').length,
+    unsupported: reports.filter((report) => report.classification === 'unsupported').length,
+    environmentError: reports.filter((report) => report.classification === 'environment-error')
+      .length,
+  };
+});
+
 const successfulRuns = [...pageRuns.values()].filter((run) => run.status === 'ok');
 const report = {
   version: 1,
@@ -401,6 +435,17 @@ const report = {
     missed: classifications.missed,
     unsupported: classifications.unsupported,
     environmentErrors: classifications['environment-error'],
+    antiOracleReports: scoredAntiOracle.length,
+    negativeCandidates: scoredAntiOracle.filter(
+      (report) => report.classification === 'negative-candidate',
+    ).length,
+    antiOracleClean: scoredAntiOracle.filter((report) => report.classification === 'clean').length,
+    antiOracleUnsupported: scoredAntiOracle.filter(
+      (report) => report.classification === 'unsupported',
+    ).length,
+    antiOracleEnvironmentErrors: scoredAntiOracle.filter(
+      (report) => report.classification === 'environment-error',
+    ).length,
     corpusPages: corpus.length,
     pagesScanned: successfulRuns.length,
     viewportsChecked: successfulRuns.reduce(
@@ -415,7 +460,12 @@ const report = {
   },
   bySupport,
   byReportType,
+  antiOracleBySource,
   failures: scoredFailures,
+  antiOracle: scoredAntiOracle,
+  environmentPages: Object.fromEntries(
+    [...pageRuns].filter(([, pageRun]) => pageRun.status === 'environment-error'),
+  ),
   pages: Object.fromEntries(pageRuns),
 };
 
