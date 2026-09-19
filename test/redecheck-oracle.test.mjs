@@ -100,9 +100,7 @@ describe('ReDeCheck benchmark oracle', () => {
   });
 
   it('marks comparable NOI-range findings as negative candidates', () => {
-    const report = parseAntiOracle(archive).find(
-      (candidate) => candidate.classification === 'NOI',
-    );
+    const report = parseAntiOracle(archive).find((candidate) => candidate.classification === 'NOI');
     const classified = classifyAntiOracleReport(report, {
       status: 'ok',
       result: {
