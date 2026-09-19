@@ -95,7 +95,9 @@ Accepted on 2026-09-19 against Openings HEAD `d15848c681b4ce348b34a4ef5849ba5d13
 - Two consecutive fixed-state reports were identical apart from `timestamp` and `summary.durationMs`.
 - Full `npm run preflight:rc` completed with `RC READY`.
 
-## Deferred until after v0.1
+## Historical v0.1 exclusions
+
+These items document what was intentionally outside the v0.1 release scope. They are not the current future-work queue; current uncommitted engine directions live in [docs/DESIGN_BACKLOG.md](docs/DESIGN_BACKLOG.md).
 
 - Electron/Desktop viewport board.
 - Viewportable product integration.
@@ -133,8 +135,11 @@ The architecture knowledge model is now explicit:
 
 - `docs/adr/` for accepted architectural decisions;
 - `docs/research/` for evidence and prior art;
-- `docs/contracts/` for semantic public-contract drafts;
+- `docs/rfcs/` for cross-cutting proposals and public-contract drafts;
 - `docs/DESIGN_BACKLOG.md` for valuable but uncommitted directions;
+- `docs/QUALITY_ATTRIBUTES.md` for architecture decision criteria;
+- `docs/RISKS.md` for risks and technical debt;
+- `docs/GLOSSARY.md` for shared terminology;
 - this roadmap for sequenced intended work;
 - `CHANGELOG.md` for implemented/shipped changes.
 
