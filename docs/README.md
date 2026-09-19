@@ -40,6 +40,14 @@ Current:
 - [ReDeCheck research](research/REDECHECK.md)
 - [Protocol and interchange survey](research/PROTOCOLS_AND_INTERCHANGE.md)
 
+### Public contract drafts - `docs/contracts/`
+
+These describe semantic contracts we are exploring for external callers without freezing a public wire format.
+
+Current:
+
+- [Scan Contract Draft](contracts/SCAN_CONTRACT.md)
+
 ### Architecture guides
 
 These describe the architecture that contributors should currently build against.
