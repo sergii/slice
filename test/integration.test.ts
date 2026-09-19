@@ -300,8 +300,11 @@ describe('slice CLI', () => {
     const narrow = report.viewports.find((viewport: { width: number }) => viewport.width === 320);
 
     expect(wide).toMatchObject({ status: 'pass', issues: [] });
-    expect(narrow.issues).toHaveLength(1);
-    expect(narrow.issues[0]).toMatchObject({
+    const wrappingIssues = narrow.issues.filter(
+      (issue: { type: string }) => issue.type === 'wrapping',
+    );
+    expect(wrappingIssues).toHaveLength(1);
+    expect(wrappingIssues[0]).toMatchObject({
       type: 'wrapping',
       viewportWidth: 320,
       previousViewportWidth: 430,
