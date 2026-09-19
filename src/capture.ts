@@ -117,7 +117,6 @@ export async function captureLayout(cdp: CDPSession): Promise<LayoutNode[]> {
   return result;
 }
 
-
 export async function captureBrowserSurface(
   cdp: CDPSession,
   viewport: Viewport,
