@@ -22,11 +22,16 @@
 - [x] AGPL-3.0-only license metadata.
 - [x] Full LICENSE.
 - [x] Changelog.
-- [ ] Final npm package identity.
-- [ ] Final npm pack validation after identity selection.
+- [x] Final npm package identity: `@viewportable/slice`.
+- [x] CLI executable identity remains `slice`.
+- [x] Accidental publication blocked with `"private": true`.
+- [ ] Confirm npm `@viewportable` scope permissions.
+- [ ] Remove `"private": true` only for an explicitly approved publish.
+- [ ] Final npm pack validation after publication safety is removed.
 
 ## Acceptance
 
+- [x] Golden harness prepared around historical broken ref `27bc8c0d...`.
 - [ ] Openings broken-state golden run.
 - [ ] Exact 768px occlusion transition confirmed on Openings.
 - [ ] Openings fixed-state clean run.
