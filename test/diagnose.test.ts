@@ -40,10 +40,39 @@ describe('diagnoseHorizontalOverflowRoot', () => {
     });
   });
 
-  it('does not claim a min-width root cause when the constraint fits', () => {
+  it('explains a fixed width when min-width does not constrain the layout', () => {
     expect(
       diagnoseHorizontalOverflowRoot(
-        node({ rect: { x: 18, y: 0, width: 300, height: 200 }, styles: { 'min-width': '0px' } }),
+        node({
+          styles: {
+            'min-width': '0px',
+            width: '720px',
+          },
+        }),
+        390,
+      ),
+    ).toEqual({
+      diagnosis: {
+        kind: 'fixed-width-constraint',
+        property: 'width',
+        value: '720px',
+        suggestion: 'remove the fixed width, constrain it, or let the layout size responsively',
+      },
+      computedWidthPx: 720,
+      availableWidthPx: 372,
+    });
+  });
+
+  it('does not claim a width root cause when the computed width fits', () => {
+    expect(
+      diagnoseHorizontalOverflowRoot(
+        node({
+          rect: { x: 18, y: 0, width: 300, height: 200 },
+          styles: {
+            'min-width': '0px',
+            width: '300px',
+          },
+        }),
         390,
       ).diagnosis,
     ).toBeNull();
