@@ -181,9 +181,8 @@ function renderSummary(report) {
         ? ''
         : failure.matches
             .slice(0, 3)
-            .map(
-              (match) =>
-                `${match.issueType}@${match.viewportWidth}px ${match.selector ?? ''}`.trim(),
+            .map((match) =>
+              `${match.issueType}@${match.viewportWidth}px ${match.selector ?? ''}`.trim(),
             )
             .join('<br>');
 
@@ -329,9 +328,8 @@ const byType = Object.keys(CLASS_MAPPING).map((type) => {
       .length,
     missed: failures.filter((failure) => failure.classification === 'missed').length,
     unsupported: failures.filter((failure) => failure.classification === 'unsupported').length,
-    environmentError: failures.filter(
-      (failure) => failure.classification === 'environment-error',
-    ).length,
+    environmentError: failures.filter((failure) => failure.classification === 'environment-error')
+      .length,
   };
 });
 
@@ -362,10 +360,7 @@ const report = {
       (sum, run) => sum + (run.result.summary?.viewportsChecked ?? 0),
       0,
     ),
-    rawIssues: successfulRuns.reduce(
-      (sum, run) => sum + (run.result.summary?.totalIssues ?? 0),
-      0,
-    ),
+    rawIssues: successfulRuns.reduce((sum, run) => sum + (run.result.summary?.totalIssues ?? 0), 0),
     sliceDurationMs: successfulRuns.reduce(
       (sum, run) => sum + (run.result.summary?.durationMs ?? 0),
       0,
