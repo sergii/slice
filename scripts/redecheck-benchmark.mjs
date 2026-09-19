@@ -154,40 +154,59 @@ function renderSummary(report) {
     '',
     '> Candidate match means compatible rule family + same page + sampled width inside the oracle range. It still requires evidence/identity review before being called a confirmed detection.',
     '',
-    '## By ReDeCheck class',
+    '## By support level',
     '',
-    '| Class | Oracle | Candidate | Missed | Unsupported | Environment |',
-    '| --- | ---: | ---: | ---: | ---: | ---: |',
+    '| Support | Distinct RLFs | Candidate | Missed | Environment |',
+    '| --- | ---: | ---: | ---: | ---: |',
   ];
 
-  for (const entry of report.byType) {
+  for (const entry of report.bySupport) {
     lines.push(
-      `| ${entry.type} | ${entry.total} | ${entry.candidateMatch} | ${entry.missed} | ${entry.unsupported} | ${entry.environmentError} |`,
+      `| ${entry.support} | ${entry.total} | ${entry.candidateMatch} | ${entry.missed} | ${entry.environmentError} |`,
     );
   }
 
   lines.push(
     '',
+    '## Oracle report classes',
+    '',
+    '| ReDeCheck report class | Distinct RLFs carrying class | Current Slice mapping | Support |',
+    '| --- | ---: | --- | --- |',
+  );
+
+  for (const entry of report.byReportType) {
+    lines.push(
+      `| ${entry.type} | ${entry.distinctFailures} | ${entry.issueTypes.join(', ') || 'none'} | ${entry.support} |`,
+    );
+  }
+
+  lines.push(
+    '',
+    '> One Distinct RLF can carry more than one ReDeCheck report class. For example, a narrow collision can also be reported as Small-Range. Therefore report-class counts do not sum to 33.',
+    '',
     '## Distinct RLFs',
     '',
-    '| ID | Type | Page | Oracle range(s) | Support | Baseline | Candidate evidence |',
-    '| ---: | --- | --- | --- | --- | --- | --- |',
+    '| ID | Page | Oracle report(s) | Support | Baseline | Candidate evidence |',
+    '| ---: | --- | --- | --- | --- | --- |',
   );
 
   for (const failure of report.failures) {
-    const ranges = failure.ranges.map((range) => `${range.min}-${range.max}px`).join(', ');
+    const oracleReports = failure.reports
+      .map((report) => `${report.type} ${report.range.min}-${report.range.max}px`)
+      .join('<br>');
     const evidence =
       failure.matches.length === 0
         ? ''
         : failure.matches
             .slice(0, 3)
-            .map((match) =>
-              `${match.issueType}@${match.viewportWidth}px ${match.selector ?? ''}`.trim(),
-            )
+            .map((match) => {
+              const oracleTypes = match.oracleReportTypes.join('/');
+              return `${match.issueType}@${match.viewportWidth}px [${oracleTypes}] ${match.selector ?? ''}`.trim();
+            })
             .join('<br>');
 
     lines.push(
-      `| ${failure.id} | ${failure.type} | ${failure.page} | ${ranges} | ${failure.support} | **${failure.classification}** | ${evidence} |`,
+      `| ${failure.id} | ${failure.page} | ${oracleReports} | ${failure.support} | **${failure.classification}** | ${evidence} |`,
     );
   }
 
@@ -318,20 +337,26 @@ for (const failure of scoredFailures) {
   classifications[failure.classification] += 1;
 }
 
-const byType = Object.keys(CLASS_MAPPING).map((type) => {
-  const failures = scoredFailures.filter((failure) => failure.type === type);
+const bySupport = ['compatible', 'partial', 'unsupported'].map((support) => {
+  const failures = scoredFailures.filter((failure) => failure.support === support);
 
   return {
-    type,
+    support,
     total: failures.length,
     candidateMatch: failures.filter((failure) => failure.classification === 'candidate-match')
       .length,
     missed: failures.filter((failure) => failure.classification === 'missed').length,
-    unsupported: failures.filter((failure) => failure.classification === 'unsupported').length,
     environmentError: failures.filter((failure) => failure.classification === 'environment-error')
       .length,
   };
 });
+
+const byReportType = Object.entries(CLASS_MAPPING).map(([type, mapping]) => ({
+  type,
+  distinctFailures: oracleFailures.filter((failure) => failure.reportTypes.includes(type)).length,
+  support: mapping.support,
+  issueTypes: mapping.issueTypes,
+}));
 
 const successfulRuns = [...pageRuns.values()].filter((run) => run.status === 'ok');
 const report = {
@@ -366,7 +391,8 @@ const report = {
       0,
     ),
   },
-  byType,
+  bySupport,
+  byReportType,
   failures: scoredFailures,
   pages: Object.fromEntries(pageRuns),
 };
