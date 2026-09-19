@@ -282,6 +282,41 @@ describe('slice CLI', () => {
     });
   });
 
+  it('reports a sibling that wraps away from a stable row', async () => {
+    const out = await makeOutDir();
+    const result = await runCli('wrapping-anomaly.html', [
+      '--widths',
+      '430,320',
+      '--wait',
+      '0',
+      '--no-boundary',
+      '--out',
+      out,
+    ]);
+
+    expect(result.code).toBe(1);
+    const report = JSON.parse(await readFile(path.join(out, 'results.json'), 'utf8'));
+    const wide = report.viewports.find((viewport: { width: number }) => viewport.width === 430);
+    const narrow = report.viewports.find((viewport: { width: number }) => viewport.width === 320);
+
+    expect(wide).toMatchObject({ status: 'pass', issues: [] });
+    expect(narrow.issues).toHaveLength(1);
+    expect(narrow.issues[0]).toMatchObject({
+      type: 'wrapping',
+      viewportWidth: 320,
+      previousViewportWidth: 430,
+      selector: 'a.wrapped',
+      parentSelector: 'nav',
+      evidence: {
+        previousRowSize: 4,
+        currentRowSize: 1,
+        stableSiblingCount: 3,
+      },
+    });
+    expect(result.stdout).toContain('wraps below siblings');
+    expect(report.boundaries).toEqual([]);
+  });
+
   it('reports an independent fixed-element collision without document overflow', async () => {
     const out = await makeOutDir();
     const result = await runCli('fixed-collision.html', [
