@@ -1,0 +1,104 @@
+import { access, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const expectedTag = process.argv[2] ?? null;
+
+async function read(relativePath) {
+  return readFile(path.join(root, relativePath), 'utf8');
+}
+
+async function requireFile(relativePath) {
+  try {
+    await access(path.join(root, relativePath));
+  } catch {
+    throw new Error(`Release requires ${relativePath}`);
+  }
+}
+
+const packageJson = JSON.parse(await read('package.json'));
+
+if (packageJson.name !== '@viewportable/slice') {
+  throw new Error('package.json name must be @viewportable/slice');
+}
+
+if (packageJson.bin?.slice !== './dist/cli.mjs') {
+  throw new Error('package.json must expose ./dist/cli.mjs as bin.slice');
+}
+
+if (packageJson.license !== 'AGPL-3.0-only') {
+  throw new Error('package.json license must be AGPL-3.0-only');
+}
+
+if (packageJson.private !== true) {
+  throw new Error(
+    'npm publication safety changed: package.json private must remain true until publishing is explicitly approved',
+  );
+}
+
+for (const required of [
+  'LICENSE',
+  'README.md',
+  'CHANGELOG.md',
+  'RELEASE.md',
+  'action.yml',
+  'package-lock.json',
+  'tsdown.config.ts',
+  'src/cli.ts',
+  'scripts/github-summary.mjs',
+]) {
+  await requireFile(required);
+}
+
+const action = await read('action.yml');
+for (const requiredFragment of [
+  'npm ci --ignore-scripts',
+  'npm run build',
+  'dist/cli.mjs',
+  'scripts/github-summary.mjs',
+  'actions/upload-artifact@v7',
+]) {
+  if (!action.includes(requiredFragment)) {
+    throw new Error(`action.yml is missing required release fragment: ${requiredFragment}`);
+  }
+}
+
+if (expectedTag) {
+  if (!/^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(expectedTag)) {
+    throw new Error(`Release tag must look like v0.1.0 or v0.1.0-rc.1; got ${expectedTag}`);
+  }
+
+  const packageTag = `v${packageJson.version}`;
+  if (expectedTag !== packageTag) {
+    throw new Error(
+      `Release tag ${expectedTag} does not match package version ${packageJson.version} (expected ${packageTag})`,
+    );
+  }
+
+  const [readme, example] = await Promise.all([
+    read('README.md'),
+    read('examples/github/slice.yml'),
+  ]);
+
+  for (const [name, content] of [
+    ['README.md', readme],
+    ['examples/github/slice.yml', example],
+  ]) {
+    if (content.includes('viewportable/slice@main')) {
+      throw new Error(`${name} still points to viewportable/slice@main for a tagged release`);
+    }
+
+    if (!content.includes(`viewportable/slice@${expectedTag}`)) {
+      throw new Error(
+        `${name} must contain the immutable Action reference viewportable/slice@${expectedTag}`,
+      );
+    }
+  }
+}
+
+process.stdout.write(
+  `Release layout OK · ${packageJson.name}@${packageJson.version}` +
+    (expectedTag ? ` · tag ${expectedTag}` : '') +
+    '\n',
+);
