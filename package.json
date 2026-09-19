@@ -11,8 +11,8 @@
   "type": "module",
   "scripts": {
     "build": "tsdown",
-    "fmt": "oxfmt --write \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"scripts/**/*.mjs\" tsdown.config.ts package.json tsconfig.json",
-    "fmt:check": "oxfmt --check \"src/**/*.ts\" \"test/**/*.{ts,mjs}\" \"scripts/**/*.mjs\" tsdown.config.ts package.json tsconfig.json",
+    "fmt": "oxfmt --write \"src/**/*.ts\" \"test/**/*.ts\" \"test/**/*.mjs\" \"scripts/**/*.mjs\" tsdown.config.ts package.json tsconfig.json",
+    "fmt:check": "oxfmt --check \"src/**/*.ts\" \"test/**/*.ts\" \"test/**/*.mjs\" \"scripts/**/*.mjs\" tsdown.config.ts package.json tsconfig.json",
     "lint": "oxlint --deny-warnings --vitest-plugin src test scripts tsdown.config.ts",
     "lint:fix": "oxlint --fix --vitest-plugin src test scripts tsdown.config.ts",
     "typecheck": "tsc --noEmit",
