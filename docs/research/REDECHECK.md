@@ -177,6 +177,37 @@ This fits the modular engine direction documented in `docs/ENGINE_ARCHITECTURE.m
 
 We should preserve structural detection as the fast default and add screenshot/pixel evidence only when a detector needs it.
 
+## Oracle semantics discovered during benchmark work
+
+The published ReDeCheck results archive distinguishes between **raw failure reports** and manually grouped **Distinct RLFs**.
+
+This matters because one underlying visual defect can have:
+
+- several raw reports involving related elements;
+- several viewport ranges;
+- more than one ReDeCheck report class.
+
+For example, CloudConvert Distinct RLF #1 is represented both as an `Element Collision` report and a `Small-Range` report at 980px. PepFeed RLF #6 and WillMyPhoneWork RLF #8 similarly combine collision and small-range reports.
+
+Therefore the benchmark oracle is modeled as:
+
+```text
+Distinct RLF
+  -> page
+  -> reports[]
+       -> type
+       -> viewport range
+       -> reason/source report
+```
+
+not as:
+
+```text
+failure ID -> one detector type
+```
+
+This is directly relevant to Viewportable architecture: detector outputs are evidence, while a user-facing canonical finding or root cause may group multiple detector observations.
+
 ## Benchmark assets
 
 ### ReDeCheck 2017 corpus
