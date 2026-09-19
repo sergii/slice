@@ -1,6 +1,6 @@
 # Slice
 
-Slice is a deterministic responsive QA CLI for coding agents. It loads one page once in Chromium, checks a set of viewport widths, detects horizontal overflow without screenshots or AI, attributes each failure to the deepest offending element, and writes a machine-readable report to `.slice/results.json`.
+Slice is deterministic responsive QA for coding agents and CI. It opens one URL in Chromium, scans a configured viewport matrix, detects horizontal overflow, fixed-element collisions, and fixed-content occlusion, searches exact per-issue breakpoint boundaries, groups deterministic layout root causes, and writes machine-readable evidence to `.slice/results.json` - without screenshots or AI-based visual judgment.
 
 The package identity is reserved as **`@viewportable/slice`** and the executable remains **`slice`**. Publishing is intentionally disabled with `"private": true` until the v0.1 release decision.
 
@@ -323,6 +323,49 @@ The run writes retained evidence under:
 ```
 
 The harness requires a clean Openings working tree by default. Set `OPENINGS_ALLOW_DIRTY=1` only when deliberately validating uncommitted work.
+
+## Release candidate preflight
+
+Before creating an RC tag, run the same local release gate as the maintainer:
+
+```bash
+npm ci
+npm run preflight:rc
+```
+
+The preflight requires a clean Slice checkout and runs:
+
+1. formatting, lint, typecheck, unit tests, build, npm package validation, and release-layout validation;
+2. Playwright Chromium availability;
+3. browser integration tests and built CLI smoke;
+4. broken/fixed demo acceptance;
+5. Responsively correlation acceptance;
+6. the real Openings Golden Acceptance, including exact 768-819px historical boundaries and consecutive-run determinism.
+
+A successful run ends with `RC READY`.
+
+The first RC is prepared only after that pass:
+
+```bash
+npm version 0.1.0-rc.1 --no-git-tag-version
+```
+
+Then finalize the changelog date and replace the temporary `viewportable/slice@main` references in this README and `examples/github/slice.yml` with the immutable `viewportable/slice@v0.1.0-rc.1` reference.
+
+Validate that exact tag contract before committing:
+
+```bash
+npm run validate:release -- v0.1.0-rc.1
+```
+
+After the release commit is on `main`, create and push the tag:
+
+```bash
+git tag v0.1.0-rc.1
+git push origin main v0.1.0-rc.1
+```
+
+The tag-triggered Release workflow reruns repository/browser/Action checks, creates a package `.tgz` for inspection, and creates a GitHub prerelease. It does **not** publish to npm. Tagged release validation refuses `@main` Action references, so release documentation must point to the immutable tag.
 
 ## Local modernization lab
 
