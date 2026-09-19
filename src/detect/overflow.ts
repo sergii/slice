@@ -161,7 +161,6 @@ export function detectHorizontalOverflow(
   });
 }
 
-
 export const horizontalOverflowDetector: Detector<DetectedOverflow, LayoutNode> = {
   id: 'horizontal-overflow',
   requires: ['geometry', 'computed-styles', 'tree'],
