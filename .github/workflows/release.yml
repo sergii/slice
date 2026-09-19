@@ -1,0 +1,128 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: slice-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Require tag commit on main
+        run: |
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install npm dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Validate release tag and Action layout
+        run: node scripts/validate-release.mjs "$GITHUB_REF_NAME"
+
+      - name: Format check
+        run: npm run fmt:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate npm package
+        run: npm run validate:package
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Smoke test built CLI
+        run: npm run smoke
+
+      - name: Demo project
+        run: npm run demo
+
+      - name: Responsively visual demo harness
+        run: npm run demo:responsively:check
+
+      - name: Start GitHub Action fixture server
+        run: |
+          node scripts/demo-server.mjs > /tmp/slice-release-action-server.log 2>&1 &
+          echo $! > /tmp/slice-release-action-server.pid
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:4173/fixed.html >/dev/null; then
+              exit 0
+            fi
+            sleep 0.2
+          done
+          cat /tmp/slice-release-action-server.log
+          exit 1
+
+      - name: Tagged GitHub Action smoke
+        uses: ./
+        with:
+          url: http://127.0.0.1:4173/fixed.html
+          out: .slice/release-action-smoke
+          artifact-name: slice-release-action-smoke
+          install-browser: 'false'
+
+      - name: Stop GitHub Action fixture server
+        if: ${{ always() }}
+        run: |
+          if [[ -f /tmp/slice-release-action-server.pid ]]; then
+            kill "$(cat /tmp/slice-release-action-server.pid)" 2>/dev/null || true
+          fi
+
+      - name: Build GitHub release package artifact
+        run: |
+          rm -rf .release
+          mkdir -p .release
+          npm pack --ignore-scripts --pack-destination .release
+          ls -lah .release
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          args=(
+            release create "$GITHUB_REF_NAME"
+            .release/*.tgz
+            --verify-tag
+            --title "Slice $GITHUB_REF_NAME"
+            --generate-notes
+          )
+
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            args+=(--prerelease)
+          fi
+
+          gh "${args[@]}"
