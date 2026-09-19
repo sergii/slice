@@ -270,8 +270,7 @@ function renderSummary(report) {
             })
             .join('<br>');
 
-    const reviewStatus =
-      failure.classification === 'candidate-match' ? failure.review.status : '';
+    const reviewStatus = failure.classification === 'candidate-match' ? failure.review.status : '';
 
     lines.push(
       `| ${failure.id} | ${failure.page} | ${oracleReports} | ${failure.support} | **${failure.classification}** | ${reviewStatus} | ${evidence} |`,
