@@ -1,8 +1,4 @@
-import type {
-  SurfaceCapability,
-  SurfaceNode,
-  SurfaceSnapshot,
-} from './surface.js';
+import type { SurfaceCapability, SurfaceNode, SurfaceSnapshot } from './surface.js';
 
 export interface DetectorContext<TNode extends SurfaceNode = SurfaceNode> {
   surface: SurfaceSnapshot<TNode>;
