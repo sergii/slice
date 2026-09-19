@@ -113,6 +113,8 @@ Slice is expected to evolve into the Viewportable engine. Future capability work
 
 Initial responsive-layout research is tracked in [docs/research/REDECHECK.md](docs/research/REDECHECK.md). ReDeCheck's Responsive Layout Graph, small-range anomaly detection, wrapping/protrusion models, regression graph comparison, and independent failure corpus are research inputs rather than runtime dependencies.
 
+The first post-v0.1 implementation slice is the platform-neutral `SurfaceSnapshot` and composable detector contract. It must preserve current findings and default runtime characteristics while creating a clean adapter boundary between browser capture and analysis. Platform adapter direction is documented in [docs/PLATFORM_ADAPTERS.md](docs/PLATFORM_ADAPTERS.md).
+
 The first post-v0.1 research sequence is:
 
 1. benchmark current Slice against the independently collected ReDeCheck corpus;
@@ -120,3 +122,6 @@ The first post-v0.1 research sequence is:
 3. prototype the smallest useful relationship-interval representation;
 4. add element protrusion, small-range anomaly, and wrapping detectors one at a time;
 5. keep screenshot/pixel verification optional until structural evidence shows where it reduces false positives enough to justify its cost.
+
+
+After the structural web model proves itself, run a deliberately small React Native adapter spike: normalize one simulator-rendered screen into `SurfaceSnapshot` and prove that an existing shared geometry detector can find a real layout defect without algorithm changes. Capacitor should reuse the browser path first because its UI remains WebView-based.
