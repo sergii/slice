@@ -23,7 +23,14 @@ jobs:
           npm ci
           npm run build
           npm run start -- --host 127.0.0.1 > /tmp/app.log 2>&1 &
-          npx wait-on http://127.0.0.1:3000
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:3000 >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/app.log
+          exit 1
 
       - name: Run Slice
         uses: viewportable/slice@main
