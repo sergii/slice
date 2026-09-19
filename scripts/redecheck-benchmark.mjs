@@ -114,6 +114,8 @@ async function startServer() {
     response.writeHead(200, {
       'content-type': mimeType(filePath),
       'cache-control': 'no-store',
+      'content-security-policy':
+        "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' data:; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'none'; frame-src 'self' data:;",
     });
     createReadStream(filePath).pipe(response);
   });
