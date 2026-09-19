@@ -365,7 +365,7 @@ async function enrichIssues(
   rootCauseIds: Map<string, string>,
 ): Promise<RawCaptureResult> {
   const nodes = surface.nodes;
-  const { width: viewportWidth, height: viewportHeight } = surface.viewport;
+  const { width: viewportWidth } = surface.viewport;
   const detected = await runDetector(horizontalOverflowDetector, surface);
   const collisions = await runDetector(fixedElementCollisionDetector, surface);
   const occlusions = await runDetector(fixedContentOcclusionDetector, surface);
