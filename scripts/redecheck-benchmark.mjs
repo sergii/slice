@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { createReadStream } from 'node:fs';
 import { access, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import http from 'node:http';
@@ -24,6 +24,30 @@ const cliPath = path.join(repoRoot, 'dist', 'cli.mjs');
 const VIEWPORT_HEIGHT = 900;
 const WAIT_MS = 100;
 const TIMEOUT_MS = 15_000;
+
+function runProcess(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      ...options,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.once('error', reject);
+    child.once('close', (status, signal) => {
+      resolve({ status, signal, stdout, stderr });
+    });
+  });
+}
 
 function slug(value) {
   return value
@@ -258,7 +282,7 @@ try {
       `Scanning ${corpusPage} at ${widths.length} widths (${widths.join(',')})\n`,
     );
 
-    const child = spawnSync(
+    const child = await runProcess(
       process.execPath,
       [
         cliPath,
@@ -277,8 +301,6 @@ try {
       ],
       {
         cwd: repoRoot,
-        encoding: 'utf8',
-        maxBuffer: 10 * 1024 * 1024,
       },
     );
 
