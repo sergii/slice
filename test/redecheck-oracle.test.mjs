@@ -4,28 +4,33 @@ import { classifyFailure, parseOracle, widthsForPage } from '../scripts/lib/rede
 const archive = `### True Positives### {#TP}
 
 | **Report Type** | **Web Page** | **Distinct RLF** | **Viewport Range** | **Classification** | **Reason** |
-| Viewport Protrusion| Example | [1](../Example-failure-1.html#About-drlf) | 320px-340px | TP | first report |
-| Viewport Protrusion| Example | [1](../Example-failure-2.html#About-drlf) | 320px-350px | TP | related report |
+| Viewport Protrusion| Example | [1](../Example-failure-1.html#About-drlf) | 320px-340px | TP | viewport report |
+| Small-Range| Example | [1](../Example-failure-2.html#About-drlf) | 330px-330px | TP | same distinct defect, another report type |
 | Wrapping| Other | [2](../Other-failure-1.html#About-drlf) | 476px-480px | TP | wrapped |
 
 ### False Positives### {#FP}
 `;
 
 describe('ReDeCheck benchmark oracle', () => {
-  it('deduplicates raw reports into distinct RLFs', () => {
+  it('groups multiple report types under one Distinct RLF identity', () => {
     const failures = parseOracle(archive, { expectedDistinct: 2 });
 
     expect(failures).toHaveLength(2);
     expect(failures[0]).toMatchObject({
       id: 1,
-      type: 'Viewport Protrusion',
       page: 'Example',
-      ranges: [
-        { min: 320, max: 340 },
-        { min: 320, max: 350 },
+      reportTypes: ['Viewport Protrusion', 'Small-Range'],
+      reports: [
+        {
+          type: 'Viewport Protrusion',
+          range: { min: 320, max: 340 },
+        },
+        {
+          type: 'Small-Range',
+          range: { min: 330, max: 330 },
+        },
       ],
     });
-    expect(failures[0].reports).toHaveLength(2);
   });
 
   it('samples narrow oracle ranges directly', () => {
@@ -37,7 +42,7 @@ describe('ReDeCheck benchmark oracle', () => {
     expect(widths).toContain(480);
   });
 
-  it('marks compatible page/range findings as candidates, not confirmed detections', () => {
+  it('marks compatible report-family findings as candidates, not confirmed detections', () => {
     const [failure] = parseOracle(archive, { expectedDistinct: 2 });
     const classified = classifyFailure(failure, {
       status: 'ok',
@@ -58,10 +63,12 @@ describe('ReDeCheck benchmark oracle', () => {
     });
 
     expect(classified.classification).toBe('candidate-match');
+    expect(classified.support).toBe('compatible');
     expect(classified.matches).toHaveLength(1);
+    expect(classified.matches[0].oracleReportTypes).toEqual(['Viewport Protrusion']);
   });
 
-  it('keeps unsupported classes separate from misses', () => {
+  it('keeps fully unsupported distinct RLFs separate from misses', () => {
     const [, failure] = parseOracle(archive, { expectedDistinct: 2 });
     const classified = classifyFailure(failure, {
       status: 'ok',
