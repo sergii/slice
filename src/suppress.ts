@@ -18,8 +18,7 @@ export function isIssueSuppressed(issue: Issue, rules: SuppressionRule[]): boole
 
     if (issue.type === 'horizontal-overflow' && rule.type === 'horizontal-overflow') {
       return (
-        rule.selector === issue.selector &&
-        (rule.side === undefined || rule.side === issue.side)
+        rule.selector === issue.selector && (rule.side === undefined || rule.side === issue.side)
       );
     }
 
