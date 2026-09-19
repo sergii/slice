@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      html,
+      body {
+        margin: 0;
+      }
+
+      main {
+        min-height: 900px;
+        position: relative;
+      }
+
+      .apply {
+        position: absolute;
+        right: 20px;
+        bottom: 20px;
+        width: 160px;
+        height: 48px;
+      }
+
+      .mobile-control {
+        display: none;
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 60;
+        width: 100px;
+        height: 48px;
+      }
+
+      @media (max-width: 768px) {
+        .mobile-control {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <button class="apply" type="button">Apply</button>
+    </main>
+    <div class="mobile-control">Mobile control</div>
+  </body>
+</html>
