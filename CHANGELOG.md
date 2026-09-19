@@ -18,11 +18,14 @@ All notable changes to Slice are documented here.
 - Deterministic detector-specific suppressions that retain suppressed evidence in JSON.
 - Composite GitHub Action with job summary, artifact upload, and the same scanner/report contract as the CLI.
 - Demo and Responsively harnesses plus end-to-end CI coverage.
+- Real-project Openings Golden Acceptance harness using the historical pre-fix regression and consecutive clean fixed runs.
 
 ### Changed
 
 - Repository references now point to `viewportable/slice`.
 - Package metadata now declares repository, homepage, issue tracker, and AGPL licensing.
+- npm package identity is fixed as `@viewportable/slice` while the executable remains `slice`.
+- npm publication remains intentionally disabled with `"private": true` until release approval.
 
 ### License
 
