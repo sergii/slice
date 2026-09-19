@@ -143,7 +143,6 @@ export function detectFixedElementCollisions(
   return findings;
 }
 
-
 export const fixedElementCollisionDetector: Detector<FixedCollisionFinding, LayoutNode> = {
   id: 'fixed-element-collision',
   requires: ['geometry', 'computed-styles', 'tree'],
