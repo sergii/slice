@@ -24,15 +24,15 @@ inputs:
     default: 'true'
 
 outputs:
-  exit-code:
+  exit_code:
     description: Slice CLI exit code (0 clean, 1 findings, 2 scanner/setup failure)
-    value: ${{ steps.scan.outputs.exit-code }}
-  result-path:
+    value: ${{ steps.scan.outputs.exit_code }}
+  result_path:
     description: Path to results.json
-    value: ${{ steps.scan.outputs.result-path }}
-  artifact-url:
+    value: ${{ steps.scan.outputs.result_path }}
+  artifact_url:
     description: URL of the uploaded Slice artifact when available
-    value: ${{ steps.artifact.outputs.artifact-url }}
+    value: ${{ steps.artifact.outputs.artifact_url }}
 
 runs:
   using: composite
@@ -79,14 +79,14 @@ runs:
         code=$?
         set -e
 
-        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
-        echo "result-path=$SLICE_OUT/results.json" >> "$GITHUB_OUTPUT"
+        echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+        echo "result_path=$SLICE_OUT/results.json" >> "$GITHUB_OUTPUT"
 
     - name: Write job summary
       if: ${{ always() }}
       shell: bash
       env:
-        SLICE_RESULT_PATH: ${{ steps.scan.outputs.result-path }}
+        SLICE_RESULT_PATH: ${{ steps.scan.outputs.result_path }}
       run: node "$GITHUB_ACTION_PATH/scripts/github-summary.mjs" "$SLICE_RESULT_PATH"
 
     - name: Upload Slice results
@@ -95,7 +95,7 @@ runs:
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ steps.scan.outputs.result-path }}
+        path: ${{ steps.scan.outputs.result_path }}
         if-no-files-found: ignore
         include-hidden-files: true
 
@@ -103,7 +103,7 @@ runs:
       if: ${{ always() }}
       shell: bash
       env:
-        SLICE_EXIT_CODE: ${{ steps.scan.outputs.exit-code }}
+        SLICE_EXIT_CODE: ${{ steps.scan.outputs.exit_code }}
       run: |
         code="${SLICE_EXIT_CODE:-2}"
         exit "$code"
