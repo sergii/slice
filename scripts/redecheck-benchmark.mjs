@@ -173,6 +173,9 @@ function renderSummary(report) {
     `- Missed within currently compatible rule families: **${report.summary.missed}**`,
     `- Unsupported by current detector families: **${report.summary.unsupported}**`,
     `- Environment errors: **${report.summary.environmentErrors}**`,
+    `- Anti-oracle raw reports (FP + NOI): **${report.summary.antiOracleReports}**`,
+    `- Anti-oracle negative candidates: **${report.summary.negativeCandidates}**`,
+    `- Anti-oracle clean comparable reports: **${report.summary.antiOracleClean}**`,
     `- Corpus pages scanned: **${report.summary.pagesScanned}/${report.summary.corpusPages}**`,
     `- Sampled viewport renders: **${report.summary.viewportsChecked}**`,
     `- Raw Slice issues emitted: **${report.summary.rawIssues}**`,
@@ -210,6 +213,22 @@ function renderSummary(report) {
     '',
     '> One Distinct RLF can carry more than one ReDeCheck report class. For example, a narrow collision can also be reported as Small-Range. Therefore report-class counts do not sum to 33.',
     '',
+    '## Anti-oracle',
+    '',
+    'ReDeCheck also classified raw reports as false positives (FP) or non-observable issues (NOI). A negative candidate means Slice emitted a compatible rule in the same page/range; it is a review candidate, not an automatically proven false positive.',
+    '',
+    '| Source classification | Raw reports | Negative candidate | Clean | Unsupported | Environment |',
+    '| --- | ---: | ---: | ---: | ---: | ---: |',
+  );
+
+  for (const entry of report.antiOracleBySource) {
+    lines.push(
+      `| ${entry.sourceClassification} | ${entry.total} | ${entry.negativeCandidate} | ${entry.clean} | ${entry.unsupported} | ${entry.environmentError} |`,
+    );
+  }
+
+  lines.push(
+    '',
     '## Distinct RLFs',
     '',
     '| ID | Page | Oracle report(s) | Support | Baseline | Candidate evidence |',
@@ -217,9 +236,22 @@ function renderSummary(report) {
   );
 
   for (const failure of report.failures) {
-    const oracleReports = failure.reports
-      .map((report) => `${report.type} ${report.range.min}-${report.range.max}px`)
-      .join('<br>');
+    const uniqueReports = [
+      ...new Map(
+        failure.reports.map((report) => [
+          `${report.type}|${report.range.min}|${report.range.max}`,
+          report,
+        ]),
+      ).values(),
+    ];
+    const rawReportSuffix =
+      failure.reports.length > uniqueReports.length
+        ? ` (${failure.reports.length} raw reports)`
+        : '';
+    const oracleReports =
+      uniqueReports
+        .map((report) => `${report.type} ${report.range.min}-${report.range.max}px`)
+        .join('<br>') + rawReportSuffix;
     const evidence =
       failure.matches.length === 0
         ? ''
@@ -243,9 +275,30 @@ function renderSummary(report) {
     '- `unsupported` identifies real capability gaps and is not counted as a miss.',
     '- `missed` means the current engine has a nominally compatible rule family but found no compatible issue at sampled widths inside the known failure range.',
     '- `candidate-match` is deliberately weaker than confirmed detection until subject identity/evidence is reviewed.',
+    '- `negative-candidate` is similarly a review queue, not an automatic false-positive verdict.',
     '- page-level raw results are preserved under `pages/` for follow-up review.',
     '',
   );
+
+  const environmentPages = Object.entries(report.environmentPages);
+
+  if (environmentPages.length > 0) {
+    lines.push(
+      '## Environment errors',
+      '',
+      '| Page | Exit | Error |',
+      '| --- | ---: | --- |',
+    );
+
+    for (const [page, pageRun] of environmentPages) {
+      const error = (pageRun.stderr || pageRun.stdout || 'unknown scanner error')
+        .replace(/\s+/g, ' ')
+        .slice(0, 240);
+      lines.push(`| ${page} | ${pageRun.exitCode ?? ''} | ${error} |`);
+    }
+
+    lines.push('');
+  }
 
   return `${lines.join('\n')}\n`;
 }
