@@ -61,7 +61,7 @@ npx slice http://localhost:3000
 The first demo is intentionally framework-neutral. Slice consumes a URL, so a static page exercises the same browser/CDP path as Rails, React, or Next.js without adding another framework to debug.
 
 ```bash
-git clone https://github.com/sergii/slice.git
+git clone https://github.com/viewportable/slice.git
 cd slice
 npm ci
 npm run demo
@@ -169,6 +169,55 @@ slice http://127.0.0.1:4173 --ready-selector 'main[data-app-ready]'
 ```
 
 If the selector does not become visible within `--timeout`, Slice exits with code `2` and does not write a partial report. This prevents a login, error, or loading shell from being mistaken for a clean application scan.
+
+### Project configuration and suppressions
+
+Put project defaults in `slice.config.json` at the working directory root:
+
+```json
+{
+  "widths": [320, 390, 430, 768, 1024],
+  "height": 900,
+  "wait": 100,
+  "timeout": 30000,
+  "readySelector": "main[data-app-ready]",
+  "boundary": true,
+  "out": ".slice",
+  "ignore": [
+    {
+      "type": "fixed-content-occlusion",
+      "selector": "button.help",
+      "targetSelector": "button.dismiss"
+    }
+  ]
+}
+```
+
+Slice automatically loads this file when it exists. Use `--config path/to/config.json` for another location. Explicit CLI options override config values.
+
+Suppressions are exact and detector-specific rather than heuristic allowlists. A suppressed finding does not fail the viewport, contribute to boundary search, or make the CLI exit with code `1`. The evidence is not discarded: it remains in `viewports[].suppressedIssues`, and the aggregate count is stored in `summary.suppressedIssues`.
+
+Supported suppression shapes are:
+
+```json
+[
+  {
+    "type": "horizontal-overflow",
+    "selector": "div.known-strip",
+    "side": "right"
+  },
+  {
+    "type": "fixed-element-collision",
+    "selector": "button.help",
+    "otherSelector": "button.chat"
+  },
+  {
+    "type": "fixed-content-occlusion",
+    "selector": "button.help",
+    "targetSelector": "button.dismiss"
+  }
+]
+```
 
 ### Fixed-element collision detector
 

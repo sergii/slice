@@ -82,6 +82,7 @@ export const viewportResultSchema = z.object({
   height: z.number().int().positive(),
   status: z.enum(['pass', 'fail']),
   issues: z.array(issueSchema),
+  suppressedIssues: z.array(issueSchema),
 });
 
 export const boundaryResultSchema = z.object({
@@ -147,6 +148,7 @@ export const resultsSchema = z.object({
     passed: z.number().int().nonnegative(),
     failed: z.number().int().nonnegative(),
     totalIssues: z.number().int().nonnegative(),
+    suppressedIssues: z.number().int().nonnegative(),
     rootCauseGroups: z.number().int().nonnegative(),
     durationMs: z.number().int().nonnegative(),
   }),
