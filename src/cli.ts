@@ -50,6 +50,10 @@ interface BoundaryDisplay {
   rangeEnd: number;
 }
 
+interface RootCauseBoundaryResult extends RootCauseBoundary {
+  rootCauseId: string;
+}
+
 interface CapturedRootCause extends RootCauseObservation {
   id: string;
   selector: string;
@@ -553,7 +557,7 @@ async function captureAtWidth(
 
 function aggregateRootCauses(
   observations: CapturedRootCause[],
-  boundaries: BoundaryResult[],
+  boundaries: RootCauseBoundaryResult[],
 ): RootCause[] {
   const byId = new Map<
     string,
@@ -602,7 +606,7 @@ function aggregateRootCauses(
     const boundaryByKey = new Map<string, RootCauseBoundary>();
 
     for (const boundary of boundaries) {
-      if (!aggregate.issueIds.has(boundary.issueId)) continue;
+      if (boundary.rootCauseId !== aggregate.id) continue;
 
       const key =
         `${boundary.boundary}|${boundary.lastGoodWidth}|${boundary.firstBadWidth}|` +
@@ -647,6 +651,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
   const issueIds = new Map<string, string>();
   const rootCauseIds = new Map<string, string>();
   const rootCauseObservations: CapturedRootCause[] = [];
+  const sampleCaptures = new Map<number, CaptureResult>();
 
   try {
     await installStabilization(runtime.context);
@@ -661,6 +666,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
 
     for (const width of widths) {
       const captured = await captureAtWidth(width, height, waitMs, runtime, issueIds, rootCauseIds);
+      sampleCaptures.set(width, captured);
       rootCauseObservations.push(...captured.rootCauses);
 
       viewports.push({
@@ -672,10 +678,11 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
     }
 
     const boundaries: BoundaryResult[] = [];
+    const rootCauseBoundaries: RootCauseBoundaryResult[] = [];
     const boundaryDisplays: BoundaryDisplay[] = [];
 
     if (options.boundary) {
-      const boundaryCaptureCache = new Map<number, CaptureResult>();
+      const boundaryCaptureCache = new Map(sampleCaptures);
       const rootCauseWidthsRecorded = new Set(widths);
 
       const captureBoundaryWidth = async (width: number): Promise<CaptureResult> => {
@@ -692,6 +699,12 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
         );
         boundaryCaptureCache.set(width, captured);
         return captured;
+      };
+
+      const recordRootCauseObservations = (width: number, captured: CaptureResult): void => {
+        if (rootCauseWidthsRecorded.has(width)) return;
+        rootCauseObservations.push(...captured.rootCauses);
+        rootCauseWidthsRecorded.add(width);
       };
 
       for (let index = 0; index < viewports.length - 1; index += 1) {
@@ -725,10 +738,7 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
           );
 
           const capturedAtBoundary = await captureBoundaryWidth(search.firstBadWidth);
-          if (!rootCauseWidthsRecorded.has(search.firstBadWidth)) {
-            rootCauseObservations.push(...capturedAtBoundary.rootCauses);
-            rootCauseWidthsRecorded.add(search.firstBadWidth);
-          }
+          recordRootCauseObservations(search.firstBadWidth, capturedAtBoundary);
 
           const result: BoundaryResult = {
             issueId,
@@ -746,10 +756,49 @@ async function runSlice(url: string, options: CliOptions): Promise<number> {
             rangeEnd: next.width,
           });
         }
+
+        const currentCapture = sampleCaptures.get(current.width);
+        const nextCapture = sampleCaptures.get(next.width);
+        if (!currentCapture || !nextCapture) continue;
+
+        const currentRootCauseIds = new Set(currentCapture.rootCauses.map((rootCause) => rootCause.id));
+        const nextRootCauseIds = new Set(nextCapture.rootCauses.map((rootCause) => rootCause.id));
+        const transitionRootCauseIds = [
+          ...new Set([...currentRootCauseIds, ...nextRootCauseIds]),
+        ].filter(
+          (rootCauseId) =>
+            currentRootCauseIds.has(rootCauseId) !== nextRootCauseIds.has(rootCauseId),
+        );
+
+        for (const rootCauseId of transitionRootCauseIds) {
+          const currentBroken = currentRootCauseIds.has(rootCauseId);
+          const passWidth = currentBroken ? next.width : current.width;
+          const failWidth = currentBroken ? current.width : next.width;
+
+          const search = await findBoundary(
+            async (width) => {
+              const captured = await captureBoundaryWidth(width);
+              return captured.rootCauses.some((rootCause) => rootCause.id === rootCauseId);
+            },
+            passWidth,
+            failWidth,
+          );
+
+          const capturedAtBoundary = await captureBoundaryWidth(search.firstBadWidth);
+          recordRootCauseObservations(search.firstBadWidth, capturedAtBoundary);
+
+          rootCauseBoundaries.push({
+            rootCauseId,
+            boundary: search.boundary,
+            lastGoodWidth: search.lastGoodWidth,
+            firstBadWidth: search.firstBadWidth,
+            probesUsed: search.probesUsed,
+          });
+        }
       }
     }
 
-    const rootCauses = aggregateRootCauses(rootCauseObservations, boundaries);
+    const rootCauses = aggregateRootCauses(rootCauseObservations, rootCauseBoundaries);
     const durationMs = Date.now() - startedAt;
     const failed = viewports.filter((viewport) => viewport.status === 'fail').length;
     const results: SliceResults = {
