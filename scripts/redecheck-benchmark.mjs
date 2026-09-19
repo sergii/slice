@@ -1,0 +1,402 @@
+import { spawnSync } from 'node:child_process';
+import { createReadStream } from 'node:fs';
+import { access, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import {
+  CLASS_MAPPING,
+  STANDARD_WIDTHS,
+  classifyFailure,
+  parseOracle,
+  widthsForPage,
+} from './lib/redecheck-oracle.mjs';
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const cacheRoot = path.join(repoRoot, '.cache', 'redecheck');
+const pagesDir = path.join(cacheRoot, 'pages');
+const archivePath = path.join(cacheRoot, 'results-archive.md');
+const sourcesPath = path.join(repoRoot, 'benchmark', 'redecheck', 'sources.json');
+const outputRoot = path.join(repoRoot, '.slice', 'benchmarks', 'redecheck');
+const pageOutputRoot = path.join(outputRoot, 'pages');
+const cliPath = path.join(repoRoot, 'dist', 'cli.mjs');
+
+const VIEWPORT_HEIGHT = 900;
+const WAIT_MS = 100;
+const TIMEOUT_MS = 15_000;
+
+function slug(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function mimeType(filePath) {
+  const extension = path.extname(filePath).toLowerCase();
+
+  return (
+    {
+      '.css': 'text/css; charset=utf-8',
+      '.gif': 'image/gif',
+      '.htm': 'text/html; charset=utf-8',
+      '.html': 'text/html; charset=utf-8',
+      '.ico': 'image/x-icon',
+      '.jpeg': 'image/jpeg',
+      '.jpg': 'image/jpeg',
+      '.js': 'text/javascript; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.png': 'image/png',
+      '.svg': 'image/svg+xml',
+      '.woff': 'font/woff',
+      '.woff2': 'font/woff2',
+    }[extension] ?? 'application/octet-stream'
+  );
+}
+
+async function resolveRequestFile(requestUrl) {
+  const pathname = decodeURIComponent(new URL(requestUrl, 'http://localhost').pathname);
+  const root = path.resolve(pagesDir);
+  let filePath = path.resolve(root, `.${pathname}`);
+
+  if (filePath !== root && !filePath.startsWith(`${root}${path.sep}`)) {
+    return null;
+  }
+
+  try {
+    const fileStat = await stat(filePath);
+    if (fileStat.isDirectory()) {
+      filePath = path.join(filePath, 'index.html');
+    }
+    await access(filePath);
+    return filePath;
+  } catch {
+    return null;
+  }
+}
+
+async function startServer() {
+  const server = http.createServer(async (request, response) => {
+    const filePath = await resolveRequestFile(request.url ?? '/');
+
+    if (!filePath) {
+      response.writeHead(404);
+      response.end('Not found');
+      return;
+    }
+
+    response.writeHead(200, {
+      'content-type': mimeType(filePath),
+      'cache-control': 'no-store',
+    });
+    createReadStream(filePath).pipe(response);
+  });
+
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+
+  const address = server.address();
+  if (!address || typeof address === 'string') {
+    server.close();
+    throw new Error('Benchmark server did not expose a TCP port');
+  }
+
+  return {
+    server,
+    origin: `http://127.0.0.1:${address.port}`,
+  };
+}
+
+async function corpusPages() {
+  const entries = await readdir(pagesDir, { withFileTypes: true });
+  const pages = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+
+    const indexPath = path.join(pagesDir, entry.name, 'index.html');
+    try {
+      await access(indexPath);
+      pages.push(entry.name);
+    } catch {
+      // Special corpus directories such as MHTML Files are intentionally skipped.
+    }
+  }
+
+  pages.sort((a, b) => a.localeCompare(b));
+
+  if (pages.length !== 26) {
+    throw new Error(`Expected 26 ReDeCheck corpus pages, found ${pages.length}`);
+  }
+
+  return pages;
+}
+
+function renderSummary(report) {
+  const lines = [
+    '# ReDeCheck Baseline',
+    '',
+    `Generated: ${report.generatedAt}`,
+    '',
+    '## Summary',
+    '',
+    `- Oracle distinct RLFs: **${report.summary.oracleFailures}**`,
+    `- Candidate matches: **${report.summary.candidateMatches}**`,
+    `- Missed within currently compatible rule families: **${report.summary.missed}**`,
+    `- Unsupported by current detector families: **${report.summary.unsupported}**`,
+    `- Environment errors: **${report.summary.environmentErrors}**`,
+    `- Corpus pages scanned: **${report.summary.pagesScanned}/${report.summary.corpusPages}**`,
+    `- Sampled viewport renders: **${report.summary.viewportsChecked}**`,
+    `- Raw Slice issues emitted: **${report.summary.rawIssues}**`,
+    `- Aggregate Slice scan time: **${(report.summary.sliceDurationMs / 1000).toFixed(1)}s**`,
+    '',
+    '> Candidate match means compatible rule family + same page + sampled width inside the oracle range. It still requires evidence/identity review before being called a confirmed detection.',
+    '',
+    '## By ReDeCheck class',
+    '',
+    '| Class | Oracle | Candidate | Missed | Unsupported | Environment |',
+    '| --- | ---: | ---: | ---: | ---: | ---: |',
+  ];
+
+  for (const entry of report.byType) {
+    lines.push(
+      `| ${entry.type} | ${entry.total} | ${entry.candidateMatch} | ${entry.missed} | ${entry.unsupported} | ${entry.environmentError} |`,
+    );
+  }
+
+  lines.push(
+    '',
+    '## Distinct RLFs',
+    '',
+    '| ID | Type | Page | Oracle range(s) | Support | Baseline | Candidate evidence |',
+    '| ---: | --- | --- | --- | --- | --- | --- |',
+  );
+
+  for (const failure of report.failures) {
+    const ranges = failure.ranges.map((range) => `${range.min}-${range.max}px`).join(', ');
+    const evidence =
+      failure.matches.length === 0
+        ? ''
+        : failure.matches
+            .slice(0, 3)
+            .map(
+              (match) =>
+                `${match.issueType}@${match.viewportWidth}px ${match.selector ?? ''}`.trim(),
+            )
+            .join('<br>');
+
+    lines.push(
+      `| ${failure.id} | ${failure.type} | ${failure.page} | ${ranges} | ${failure.support} | **${failure.classification}** | ${evidence} |`,
+    );
+  }
+
+  lines.push(
+    '',
+    '## Interpretation',
+    '',
+    '- `unsupported` identifies real capability gaps and is not counted as a miss.',
+    '- `missed` means the current engine has a nominally compatible rule family but found no compatible issue at sampled widths inside the known failure range.',
+    '- `candidate-match` is deliberately weaker than confirmed detection until subject identity/evidence is reviewed.',
+    '- page-level raw results are preserved under `pages/` for follow-up review.',
+    '',
+  );
+
+  return `${lines.join('\n')}\n`;
+}
+
+await access(cliPath);
+await access(archivePath);
+
+const sources = JSON.parse(await readFile(sourcesPath, 'utf8'));
+const archive = await readFile(archivePath, 'utf8');
+const oracleFailures = parseOracle(archive);
+const corpus = await corpusPages();
+const failuresByPage = new Map();
+
+for (const failure of oracleFailures) {
+  const list = failuresByPage.get(failure.page) ?? [];
+  list.push(failure);
+  failuresByPage.set(failure.page, list);
+}
+
+await mkdir(pageOutputRoot, { recursive: true });
+
+const { server, origin } = await startServer();
+const pageRuns = new Map();
+
+try {
+  for (const corpusPage of corpus) {
+    const oraclePage =
+      [...failuresByPage.keys()].find((name) => name.toLowerCase() === corpusPage.toLowerCase()) ??
+      corpusPage;
+    const pageFailures = failuresByPage.get(oraclePage) ?? [];
+    const widths = widthsForPage(pageFailures);
+    const pageOut = path.join(pageOutputRoot, slug(corpusPage));
+    const url = `${origin}/${encodeURIComponent(corpusPage)}/index.html`;
+
+    process.stdout.write(
+      `Scanning ${corpusPage} at ${widths.length} widths (${widths.join(',')})\n`,
+    );
+
+    const child = spawnSync(
+      process.execPath,
+      [
+        cliPath,
+        url,
+        '--widths',
+        widths.join(','),
+        '--height',
+        String(VIEWPORT_HEIGHT),
+        '--out',
+        pageOut,
+        '--no-boundary',
+        '--wait',
+        String(WAIT_MS),
+        '--timeout',
+        String(TIMEOUT_MS),
+      ],
+      {
+        cwd: repoRoot,
+        encoding: 'utf8',
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
+
+    const resultPath = path.join(pageOut, 'results.json');
+
+    if (![0, 1].includes(child.status ?? 2)) {
+      pageRuns.set(oraclePage, {
+        status: 'environment-error',
+        corpusPage,
+        widths,
+        exitCode: child.status,
+        stderr: child.stderr?.trim() ?? '',
+        stdout: child.stdout?.trim() ?? '',
+      });
+      continue;
+    }
+
+    try {
+      const result = JSON.parse(await readFile(resultPath, 'utf8'));
+      pageRuns.set(oraclePage, {
+        status: 'ok',
+        corpusPage,
+        widths,
+        exitCode: child.status,
+        result,
+      });
+    } catch (error) {
+      pageRuns.set(oraclePage, {
+        status: 'environment-error',
+        corpusPage,
+        widths,
+        exitCode: child.status,
+        stderr: `Could not read Slice results: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      });
+    }
+  }
+} finally {
+  await new Promise((resolve) => server.close(resolve));
+}
+
+const scoredFailures = oracleFailures.map((failure) => ({
+  ...failure,
+  ...classifyFailure(failure, pageRuns.get(failure.page)),
+}));
+
+const classifications = {
+  'candidate-match': 0,
+  missed: 0,
+  unsupported: 0,
+  'environment-error': 0,
+};
+
+for (const failure of scoredFailures) {
+  classifications[failure.classification] += 1;
+}
+
+const byType = Object.keys(CLASS_MAPPING).map((type) => {
+  const failures = scoredFailures.filter((failure) => failure.type === type);
+
+  return {
+    type,
+    total: failures.length,
+    candidateMatch: failures.filter((failure) => failure.classification === 'candidate-match')
+      .length,
+    missed: failures.filter((failure) => failure.classification === 'missed').length,
+    unsupported: failures.filter((failure) => failure.classification === 'unsupported').length,
+    environmentError: failures.filter(
+      (failure) => failure.classification === 'environment-error',
+    ).length,
+  };
+});
+
+const successfulRuns = [...pageRuns.values()].filter((run) => run.status === 'ok');
+const report = {
+  version: 1,
+  generatedAt: new Date().toISOString(),
+  sources,
+  methodology: {
+    oracle: 'ReDeCheck manually classified distinct true-positive RLFs',
+    standardWidths: STANDARD_WIDTHS,
+    sampledFromOracle: ['min', 'midpoint', 'max'],
+    boundarySearch: false,
+    viewportHeight: VIEWPORT_HEIGHT,
+    waitMs: WAIT_MS,
+    timeoutMs: TIMEOUT_MS,
+    automaticClassification: 'candidate-match only; confirmation requires evidence review',
+  },
+  summary: {
+    oracleFailures: oracleFailures.length,
+    candidateMatches: classifications['candidate-match'],
+    missed: classifications.missed,
+    unsupported: classifications.unsupported,
+    environmentErrors: classifications['environment-error'],
+    corpusPages: corpus.length,
+    pagesScanned: successfulRuns.length,
+    viewportsChecked: successfulRuns.reduce(
+      (sum, run) => sum + (run.result.summary?.viewportsChecked ?? 0),
+      0,
+    ),
+    rawIssues: successfulRuns.reduce(
+      (sum, run) => sum + (run.result.summary?.totalIssues ?? 0),
+      0,
+    ),
+    sliceDurationMs: successfulRuns.reduce(
+      (sum, run) => sum + (run.result.summary?.durationMs ?? 0),
+      0,
+    ),
+  },
+  byType,
+  failures: scoredFailures,
+  pages: Object.fromEntries(pageRuns),
+};
+
+const oracle = {
+  version: 1,
+  generatedAt: report.generatedAt,
+  source: sources.oracle,
+  distinctFailures: oracleFailures,
+};
+
+await mkdir(outputRoot, { recursive: true });
+await writeFile(path.join(outputRoot, 'oracle.json'), `${JSON.stringify(oracle, null, 2)}\n`);
+await writeFile(path.join(outputRoot, 'results.json'), `${JSON.stringify(report, null, 2)}\n`);
+await writeFile(path.join(outputRoot, 'summary.md'), renderSummary(report));
+
+process.stdout.write(
+  [
+    '',
+    'ReDeCheck baseline complete',
+    `  candidate matches: ${report.summary.candidateMatches}`,
+    `  missed:            ${report.summary.missed}`,
+    `  unsupported:       ${report.summary.unsupported}`,
+    `  environment error: ${report.summary.environmentErrors}`,
+    `  summary:           ${path.relative(repoRoot, path.join(outputRoot, 'summary.md'))}`,
+    '',
+  ].join('\n'),
+);
