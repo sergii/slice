@@ -64,14 +64,19 @@ Completed:
 - CLI binary remains `slice`.
 - Accidental npm publication blocked with `"private": true` until release.
 - Openings Golden Acceptance harness prepared around the real historical regression.
+- One-command `preflight:rc` release gate.
+- Release-layout validation for package identity and composite Action runtime files.
+- Tagged release validation that requires immutable Action references.
+- Tag-driven GitHub Release workflow with full verification and a package inspection artifact.
+- npm publishing remains explicitly out of the RC workflow.
 
-Remaining:
+Remaining before the first RC:
 
-- Confirm npm scope ownership/permissions before publication.
-- Remove `"private": true` only when publishing is explicitly approved.
-- Validate final packed contents after publication safety is removed.
-- Ensure release notes match the final package/action usage.
-- Tag `v0.1.0` only after Phase 6 is green.
+- Execute the local Golden Acceptance / `preflight:rc`.
+- Bump to `0.1.0-rc.1`, finalize release notes, and pin Action docs to the immutable RC tag.
+- Tag only after the release commit is green.
+
+npm scope ownership/permissions are required only before a future npm publication, not for the GitHub RC.
 
 ## Phase 6 - Real-project acceptance - Harness ready, execution remaining
 
